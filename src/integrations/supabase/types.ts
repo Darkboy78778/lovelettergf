@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      gifts: {
+        Row: {
+          created_at: string
+          gift_id: string
+          id: string
+          message: string
+          password: string | null
+          photos: string[] | null
+          recipient_name: string
+          sender_name: string
+          theme: string
+          unlock_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          gift_id: string
+          id?: string
+          message: string
+          password?: string | null
+          photos?: string[] | null
+          recipient_name: string
+          sender_name: string
+          theme?: string
+          unlock_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          gift_id?: string
+          id?: string
+          message?: string
+          password?: string | null
+          photos?: string[] | null
+          recipient_name?: string
+          sender_name?: string
+          theme?: string
+          unlock_date?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
