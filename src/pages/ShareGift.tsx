@@ -1,16 +1,36 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Download, Eye, ArrowLeft, Check } from 'lucide-react';
+import { Copy, Download, Eye, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getGift } from '@/lib/giftStorage';
-import { useState } from 'react';
+import { getGift, GiftData } from '@/lib/giftStorage';
+import { useState, useEffect } from 'react';
 import FloatingHearts from '@/components/FloatingHearts';
 
 const ShareGift = () => {
   const { id } = useParams<{ id: string }>();
-  const gift = id ? getGift(id) : null;
+  const [gift, setGift] = useState<GiftData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      if (id) {
+        const data = await getGift(id);
+        setGift(data);
+      }
+      setLoading(false);
+    };
+    load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen gradient-romantic flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    );
+  }
 
   if (!gift) {
     return (
@@ -89,7 +109,6 @@ const ShareGift = () => {
             Share the link or QR code with {gift.recipient_name}
           </p>
 
-          {/* QR Code */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -107,7 +126,6 @@ const ShareGift = () => {
             />
           </motion.div>
 
-          {/* Link */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -119,29 +137,19 @@ const ShareGift = () => {
               <code className="text-sm font-body bg-background/50 px-3 py-2 rounded-lg flex-1 truncate">
                 {giftUrl}
               </code>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCopy}
-                className="rounded-full shrink-0"
-              >
+              <Button size="sm" variant="outline" onClick={handleCopy} className="rounded-full shrink-0">
                 {copied ? <Check size={16} /> : <Copy size={16} />}
               </Button>
             </div>
           </motion.div>
 
-          {/* Actions */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button
-              onClick={handleDownloadQR}
-              variant="outline"
-              className="rounded-full font-body gap-2"
-            >
+            <Button onClick={handleDownloadQR} variant="outline" className="rounded-full font-body gap-2">
               <Download size={16} />
               Download QR Code
             </Button>

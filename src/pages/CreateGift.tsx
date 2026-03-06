@@ -1,13 +1,14 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Upload, ArrowLeft, Sparkles } from 'lucide-react';
+import { Heart, Upload, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { saveGift, GiftTheme } from '@/lib/giftStorage';
 import FloatingHearts from '@/components/FloatingHearts';
+import { useToast } from '@/hooks/use-toast';
 
 const themes: { value: GiftTheme; label: string; emoji: string }[] = [
   { value: 'love', label: 'Love', emoji: '❤️' },
@@ -19,6 +20,7 @@ const themes: { value: GiftTheme; label: string; emoji: string }[] = [
 
 const CreateGift = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [recipientName, setRecipientName] = useState('');
   const [senderName, setSenderName] = useState('');
@@ -27,6 +29,7 @@ const CreateGift = () => {
   const [theme, setTheme] = useState<GiftTheme>('love');
   const [unlockDate, setUnlockDate] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -42,21 +45,31 @@ const CreateGift = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recipientName || !senderName || !message) return;
 
-    const gift = saveGift({
-      sender_name: senderName,
-      recipient_name: recipientName,
-      message,
-      photos,
-      theme,
-      unlock_date: unlockDate || undefined,
-      password: password || undefined,
-    });
-
-    navigate(`/share/${gift.gift_id}`);
+    setIsSubmitting(true);
+    try {
+      const gift = await saveGift({
+        sender_name: senderName,
+        recipient_name: recipientName,
+        message,
+        photos,
+        theme,
+        unlock_date: unlockDate || undefined,
+        password: password || undefined,
+      });
+      navigate(`/share/${gift.gift_id}`);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create gift. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -222,10 +235,15 @@ const CreateGift = () => {
             <Button
               type="submit"
               size="lg"
+              disabled={isSubmitting}
               className="w-full rounded-full text-lg font-body gap-2"
             >
-              <Heart size={18} className="fill-primary-foreground" />
-              Create Surprise Gift
+              {isSubmitting ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Heart size={18} className="fill-primary-foreground" />
+              )}
+              {isSubmitting ? 'Creating...' : 'Create Surprise Gift'}
             </Button>
           </form>
         </motion.div>
