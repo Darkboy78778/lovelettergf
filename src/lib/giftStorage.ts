@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
 
 export type GiftTheme = 'love' | 'birthday' | 'friendship' | 'romantic' | 'surprise';
 
@@ -7,35 +8,66 @@ export interface GiftData {
   sender_name: string;
   recipient_name: string;
   message: string;
-  photos: string[]; // base64 data URLs
+  photos: string[];
   theme: GiftTheme;
   unlock_date?: string;
   password?: string;
   created_at: string;
 }
 
-const STORAGE_KEY = 'surprise_gifts';
+export async function saveGift(data: Omit<GiftData, 'gift_id' | 'created_at'>): Promise<GiftData> {
+  const gift_id = uuidv4();
+  
+  const { data: inserted, error } = await supabase
+    .from('gifts')
+    .insert({
+      gift_id,
+      sender_name: data.sender_name,
+      recipient_name: data.recipient_name,
+      message: data.message,
+      photos: data.photos,
+      theme: data.theme,
+      unlock_date: data.unlock_date || null,
+      password: data.password || null,
+    })
+    .select()
+    .single();
 
-function getAllGifts(): Record<string, GiftData> {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : {};
-}
+  if (error) throw error;
 
-export function saveGift(data: Omit<GiftData, 'gift_id' | 'created_at'>): GiftData {
-  const gift: GiftData = {
-    ...data,
-    gift_id: uuidv4(),
-    created_at: new Date().toISOString(),
+  return {
+    gift_id: inserted.gift_id,
+    sender_name: inserted.sender_name,
+    recipient_name: inserted.recipient_name,
+    message: inserted.message,
+    photos: inserted.photos || [],
+    theme: inserted.theme as GiftTheme,
+    unlock_date: inserted.unlock_date || undefined,
+    password: inserted.password || undefined,
+    created_at: inserted.created_at,
   };
-  const all = getAllGifts();
-  all[gift.gift_id] = gift;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-  return gift;
 }
 
-export function getGift(id: string): GiftData | null {
-  const all = getAllGifts();
-  return all[id] || null;
+export async function getGift(id: string): Promise<GiftData | null> {
+  const { data, error } = await supabase
+    .from('gifts')
+    .select('*')
+    .eq('gift_id', id)
+    .single();
+
+  if (error || !data) return null;
+
+  return {
+    gift_id: data.gift_id,
+    sender_name: data.sender_name,
+    recipient_name: data.recipient_name,
+    message: data.message,
+    photos: data.photos || [],
+    theme: data.theme as GiftTheme,
+    unlock_date: data.unlock_date || undefined,
+    password: data.password || undefined,
+    created_at: data.created_at,
+  };
 }
 
 export function isGiftLocked(gift: GiftData): boolean {
