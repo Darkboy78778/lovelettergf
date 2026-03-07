@@ -10,6 +10,8 @@ import SparkleParticles from '@/components/SparkleParticles';
 import GiftBox from '@/components/GiftBox';
 import ChibiDecorations from '@/components/ChibiDecorations';
 import OpeningAnimation from '@/components/OpeningAnimation';
+import MusicToggle from '@/components/MusicToggle';
+import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 
 const GiftPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ const GiftPage = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const { isPlaying, toggle: toggleMusic, play: playMusic } = useBackgroundMusic((gift?.theme as any) || 'love');
 
   useEffect(() => {
     const load = async () => {
@@ -99,6 +102,7 @@ const GiftPage = () => {
 
   return (
     <div className="min-h-screen gradient-romantic relative overflow-hidden">
+      <MusicToggle isPlaying={isPlaying} onToggle={toggleMusic} />
       <AnimatePresence mode="wait">
         {stage === 'intro' && (
           <motion.div
@@ -122,7 +126,7 @@ const GiftPage = () => {
               <GiftBox
                 senderName={gift.sender_name}
                 theme={gift.theme}
-                onOpen={() => setStage('opening')}
+                onOpen={() => { playMusic(); setStage('opening'); }}
               />
             </motion.div>
           </motion.div>
