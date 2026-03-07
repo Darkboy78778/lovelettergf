@@ -10,6 +10,8 @@ import SparkleParticles from '@/components/SparkleParticles';
 import GiftBox from '@/components/GiftBox';
 import ChibiDecorations from '@/components/ChibiDecorations';
 import OpeningAnimation from '@/components/OpeningAnimation';
+import MusicToggle from '@/components/MusicToggle';
+import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 
 const GiftPage = () => {
   const { id } = useParams<{ id: string }>();
