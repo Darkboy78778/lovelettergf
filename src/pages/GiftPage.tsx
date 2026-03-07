@@ -21,6 +21,7 @@ const GiftPage = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const { isPlaying, toggle: toggleMusic, play: playMusic } = useBackgroundMusic((gift?.theme as any) || 'love');
 
   useEffect(() => {
     const load = async () => {
