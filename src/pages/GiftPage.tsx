@@ -102,6 +102,7 @@ const GiftPage = () => {
 
   return (
     <div className="min-h-screen gradient-romantic relative overflow-hidden">
+      <MusicToggle isPlaying={isPlaying} onToggle={toggleMusic} />
       <AnimatePresence mode="wait">
         {stage === 'intro' && (
           <motion.div
@@ -125,7 +126,7 @@ const GiftPage = () => {
               <GiftBox
                 senderName={gift.sender_name}
                 theme={gift.theme}
-                onOpen={() => setStage('opening')}
+                onOpen={() => { playMusic(); setStage('opening'); }}
               />
             </motion.div>
           </motion.div>
