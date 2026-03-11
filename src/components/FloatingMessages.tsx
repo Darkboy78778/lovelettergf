@@ -108,7 +108,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
 
   useEffect(() => {
     setMessages(generateMessages());
-    const timer = setTimeout(onComplete, 8000);
+    const timer = setTimeout(onComplete, 14000);
     return () => clearTimeout(timer);
   }, [generateMessages, onComplete]);
 
