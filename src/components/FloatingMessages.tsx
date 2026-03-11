@@ -87,15 +87,20 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     }
 
     const generated: FloatingMsg[] = [];
-    for (let i = 0; i < 40; i++) {
+    const columns = 5;
+    const columnWidth = 80 / columns;
+    const count = 15;
+    for (let i = 0; i < count; i++) {
+      const col = i % columns;
+      const baseX = 10 + col * columnWidth;
       generated.push({
         id: i,
         text: allMessages[i % allMessages.length],
-        x: 5 + Math.random() * 80,
-        delay: (i * 0.18) + Math.random() * 0.3,
-        duration: 3 + Math.random() * 2,
-        size: 14 + Math.random() * 10,
-        opacity: 0.5 + Math.random() * 0.5,
+        x: baseX + (Math.random() - 0.5) * (columnWidth * 0.6),
+        delay: (i * 0.6) + Math.random() * 0.4,
+        duration: 7 + Math.random() * 3,
+        size: 14 + Math.random() * 6,
+        opacity: 0.6 + Math.random() * 0.35,
       });
     }
     return generated;
@@ -103,7 +108,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
 
   useEffect(() => {
     setMessages(generateMessages());
-    const timer = setTimeout(onComplete, 8000);
+    const timer = setTimeout(onComplete, 14000);
     return () => clearTimeout(timer);
   }, [generateMessages, onComplete]);
 
@@ -121,11 +126,11 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
       {messages.map((msg) => (
         <motion.div
           key={msg.id}
-          className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none"
+          className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none will-change-transform"
           style={{
             left: `${msg.x}%`,
             fontSize: `${msg.size}px`,
-            textShadow: '0 2px 10px hsl(var(--primary) / 0.2)',
+            textShadow: '0 0 12px hsl(var(--primary) / 0.25), 0 2px 8px hsl(var(--background) / 0.5)',
           }}
           initial={{ y: '-10%', opacity: 0, scale: 0.8 }}
           animate={{
@@ -148,7 +153,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 4, delay: 2, times: [0, 0.1, 0.7, 1] }}
+        transition={{ duration: 6, delay: 3, times: [0, 0.1, 0.7, 1] }}
       >
         <div className="text-center px-6">
           <motion.p
@@ -171,7 +176,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 font-body text-sm text-muted-foreground"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.7, 0.7] }}
-        transition={{ delay: 3, duration: 1 }}
+        transition={{ delay: 5, duration: 1 }}
         onClick={onComplete}
       >
         Tap to continue →
