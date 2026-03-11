@@ -115,15 +115,7 @@ const ShareGift = () => {
             transition={{ delay: 0.3 }}
             className="glass-card rounded-2xl p-8 inline-block mb-6"
           >
-            <QRCodeSVG
-              id="qr-code"
-              value={giftUrl}
-              size={200}
-              fgColor="hsl(340, 45%, 65%)"
-              bgColor="transparent"
-              level="H"
-              includeMargin
-            />
+            <RomanticQRCode value={giftUrl} size={180} />
           </motion.div>
 
           <motion.div
