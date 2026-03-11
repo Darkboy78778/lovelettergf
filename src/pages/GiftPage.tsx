@@ -10,14 +10,18 @@ import SparkleParticles from '@/components/SparkleParticles';
 import GiftBox from '@/components/GiftBox';
 import ChibiDecorations from '@/components/ChibiDecorations';
 import OpeningAnimation from '@/components/OpeningAnimation';
+import TransitionScreen from '@/components/TransitionScreen';
+import FloatingMessages from '@/components/FloatingMessages';
 import MusicToggle from '@/components/MusicToggle';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
+
+type Stage = 'intro' | 'opening' | 'transition' | 'floating' | 'revealed';
 
 const GiftPage = () => {
   const { id } = useParams<{ id: string }>();
   const [gift, setGift] = useState<GiftData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stage, setStage] = useState<'intro' | 'opening' | 'revealed'>('intro');
+  const [stage, setStage] = useState<Stage>('intro');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -35,6 +39,10 @@ const GiftPage = () => {
   }, [id]);
 
   const handleOpeningComplete = useCallback(() => {
+    setStage('transition');
+  }, []);
+
+  const handleFloatingComplete = useCallback(() => {
     setStage('revealed');
   }, []);
 
@@ -116,7 +124,6 @@ const GiftPage = () => {
             <FloatingHearts count={14} />
             <SparkleParticles count={25} />
             <ChibiDecorations />
-
             <motion.div
               initial={{ scale: 0.5, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -144,6 +151,40 @@ const GiftPage = () => {
           </motion.div>
         )}
 
+        {stage === 'transition' && (
+          <motion.div
+            key="transition"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <TransitionScreen
+              recipientName={gift.recipient_name}
+              theme={gift.theme}
+              onNext={() => setStage('floating')}
+            />
+          </motion.div>
+        )}
+
+        {stage === 'floating' && (
+          <motion.div
+            key="floating"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <FloatingMessages
+              theme={gift.theme}
+              senderName={gift.sender_name}
+              recipientName={gift.recipient_name}
+              specialDate={gift.unlock_date ? new Date(gift.unlock_date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined}
+              onComplete={handleFloatingComplete}
+            />
+          </motion.div>
+        )}
+
         {stage === 'revealed' && (
           <motion.div
             key="revealed"
@@ -155,7 +196,6 @@ const GiftPage = () => {
             <FloatingHearts count={8} />
             <SparkleParticles count={15} />
             <div className="relative z-10 max-w-lg mx-auto">
-              {/* Letter card */}
               <motion.div
                 initial={{ opacity: 0, y: 60, rotateX: 30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
@@ -199,7 +239,6 @@ const GiftPage = () => {
                 </motion.p>
               </motion.div>
 
-              {/* Photos as polaroids */}
               {gift.photos.length > 0 && (
                 <div className="space-y-6">
                   {gift.photos.map((photo, i) => (

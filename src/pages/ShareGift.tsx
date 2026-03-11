@@ -1,11 +1,11 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Download, Eye, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getGift, GiftData } from '@/lib/giftStorage';
 import { useState, useEffect } from 'react';
 import FloatingHearts from '@/components/FloatingHearts';
+import RomanticQRCode from '@/components/RomanticQRCode';
 
 const ShareGift = () => {
   const { id } = useParams<{ id: string }>();
@@ -115,15 +115,7 @@ const ShareGift = () => {
             transition={{ delay: 0.3 }}
             className="glass-card rounded-2xl p-8 inline-block mb-6"
           >
-            <QRCodeSVG
-              id="qr-code"
-              value={giftUrl}
-              size={200}
-              fgColor="hsl(340, 45%, 65%)"
-              bgColor="transparent"
-              level="H"
-              includeMargin
-            />
+            <RomanticQRCode value={giftUrl} size={180} />
           </motion.div>
 
           <motion.div
