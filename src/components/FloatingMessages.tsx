@@ -153,7 +153,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 4, delay: 2, times: [0, 0.1, 0.7, 1] }}
+        transition={{ duration: 6, delay: 3, times: [0, 0.1, 0.7, 1] }}
       >
         <div className="text-center px-6">
           <motion.p
