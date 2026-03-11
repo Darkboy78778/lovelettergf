@@ -87,16 +87,16 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     }
 
     const generated: FloatingMsg[] = [];
-    const columns = 5;
-    const columnWidth = 80 / columns;
     const count = 15;
     for (let i = 0; i < count; i++) {
-      const col = i % columns;
-      const baseX = 10 + col * columnWidth;
+      // Spread evenly: 0→100% across screen width
+      const evenX = ((i + 0.5) / count) * 100;
+      // Add small random jitter (±3%)
+      const jitter = (Math.random() - 0.5) * 6;
       generated.push({
         id: i,
         text: allMessages[i % allMessages.length],
-        x: baseX + (Math.random() - 0.5) * (columnWidth * 0.6),
+        x: Math.max(5, Math.min(95, evenX + jitter)),
         delay: (i * 0.6) + Math.random() * 0.4,
         duration: 7 + Math.random() * 3,
         size: 14 + Math.random() * 6,
