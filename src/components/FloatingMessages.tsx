@@ -176,7 +176,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 font-body text-sm text-muted-foreground"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.7, 0.7] }}
-        transition={{ delay: 3, duration: 1 }}
+        transition={{ delay: 5, duration: 1 }}
         onClick={onComplete}
       >
         Tap to continue →
