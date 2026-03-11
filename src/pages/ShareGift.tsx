@@ -1,11 +1,11 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Download, Eye, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getGift, GiftData } from '@/lib/giftStorage';
 import { useState, useEffect } from 'react';
 import FloatingHearts from '@/components/FloatingHearts';
+import RomanticQRCode from '@/components/RomanticQRCode';
 
 const ShareGift = () => {
   const { id } = useParams<{ id: string }>();
