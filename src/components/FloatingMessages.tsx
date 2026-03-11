@@ -126,11 +126,11 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
       {messages.map((msg) => (
         <motion.div
           key={msg.id}
-          className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none"
+          className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none will-change-transform"
           style={{
             left: `${msg.x}%`,
             fontSize: `${msg.size}px`,
-            textShadow: '0 2px 10px hsl(var(--primary) / 0.2)',
+            textShadow: '0 0 12px hsl(var(--primary) / 0.25), 0 2px 8px hsl(var(--background) / 0.5)',
           }}
           initial={{ y: '-10%', opacity: 0, scale: 0.8 }}
           animate={{
