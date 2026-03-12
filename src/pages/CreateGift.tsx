@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { saveGift, GiftTheme } from '@/lib/giftStorage';
 import FloatingHearts from '@/components/FloatingHearts';
+import VideoUpload from '@/components/VideoUpload';
 import { useToast } from '@/hooks/use-toast';
 
 const themes: { value: GiftTheme; label: string; emoji: string }[] = [
