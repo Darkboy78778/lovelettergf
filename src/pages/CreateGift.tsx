@@ -30,6 +30,7 @@ const CreateGift = () => {
   const [theme, setTheme] = useState<GiftTheme>('love');
   const [unlockDate, setUnlockDate] = useState('');
   const [password, setPassword] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
