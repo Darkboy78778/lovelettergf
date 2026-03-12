@@ -17,6 +17,16 @@ const GiftBox = ({ senderName, theme, onOpen }: GiftBoxProps) => {
 
   const colors = themeColors[theme] || themeColors.love;
 
+  const themeLabels: Record<string, { emoji: string; title: string; fromEmoji: string }> = {
+    love: { emoji: '💌', title: 'A Letter For You', fromEmoji: '❤️' },
+    birthday: { emoji: '🎂', title: 'Happy Birthday', fromEmoji: '🎉' },
+    friendship: { emoji: '💛', title: 'Happy Friendship Day', fromEmoji: '🤝' },
+    romantic: { emoji: '🌹', title: 'A Letter For You', fromEmoji: '❤️' },
+    surprise: { emoji: '🎁', title: 'A Surprise For You', fromEmoji: '✨' },
+  };
+
+  const themeLabel = themeLabels[theme] || themeLabels.love;
+
   return (
     <motion.div
       className="relative cursor-pointer select-none"
