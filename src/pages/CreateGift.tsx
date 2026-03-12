@@ -61,6 +61,7 @@ const CreateGift = () => {
         theme,
         unlock_date: unlockDate || undefined,
         password: password || undefined,
+        video_url: videoUrl || undefined,
       });
       navigate(`/share/${gift.gift_id}`);
     } catch (error) {
