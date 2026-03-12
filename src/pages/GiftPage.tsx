@@ -12,6 +12,7 @@ import ChibiDecorations from '@/components/ChibiDecorations';
 import OpeningAnimation from '@/components/OpeningAnimation';
 import TransitionScreen from '@/components/TransitionScreen';
 import FloatingMessages from '@/components/FloatingMessages';
+import MediaReveal from '@/components/MediaReveal';
 import MusicToggle from '@/components/MusicToggle';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 
