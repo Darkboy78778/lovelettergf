@@ -69,6 +69,7 @@ export async function getGift(id: string): Promise<GiftData | null> {
     theme: data.theme as GiftTheme,
     unlock_date: data.unlock_date || undefined,
     password: data.password || undefined,
+    video_url: data.video_url || undefined,
     created_at: data.created_at,
   };
 }
