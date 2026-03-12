@@ -9,6 +9,7 @@ export interface GiftData {
   recipient_name: string;
   message: string;
   photos: string[];
+  video_url?: string;
   theme: GiftTheme;
   unlock_date?: string;
   password?: string;
