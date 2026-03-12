@@ -205,8 +205,11 @@ const CreateGift = () => {
                       </div>
                     ))}
                   </div>
-                )}
+              )}
               </div>
+
+              {/* Video Upload */}
+              <VideoUpload videoUrl={videoUrl} onVideoChange={setVideoUrl} />
 
               {/* Unlock Date */}
               <div className="space-y-2">
