@@ -30,6 +30,7 @@ export async function saveGift(data: Omit<GiftData, 'gift_id' | 'created_at'>): 
       theme: data.theme,
       unlock_date: data.unlock_date || null,
       password: data.password || null,
+      video_url: data.video_url || null,
     })
     .select()
     .single();
