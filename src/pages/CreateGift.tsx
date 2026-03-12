@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { saveGift, GiftTheme } from '@/lib/giftStorage';
 import FloatingHearts from '@/components/FloatingHearts';
+import VideoUpload from '@/components/VideoUpload';
 import { useToast } from '@/hooks/use-toast';
 
 const themes: { value: GiftTheme; label: string; emoji: string }[] = [
@@ -29,6 +30,7 @@ const CreateGift = () => {
   const [theme, setTheme] = useState<GiftTheme>('love');
   const [unlockDate, setUnlockDate] = useState('');
   const [password, setPassword] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +61,7 @@ const CreateGift = () => {
         theme,
         unlock_date: unlockDate || undefined,
         password: password || undefined,
+        video_url: videoUrl || undefined,
       });
       navigate(`/share/${gift.gift_id}`);
     } catch (error) {
@@ -202,8 +205,11 @@ const CreateGift = () => {
                       </div>
                     ))}
                   </div>
-                )}
+              )}
               </div>
+
+              {/* Video Upload */}
+              <VideoUpload videoUrl={videoUrl} onVideoChange={setVideoUrl} />
 
               {/* Unlock Date */}
               <div className="space-y-2">

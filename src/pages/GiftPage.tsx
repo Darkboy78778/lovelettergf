@@ -12,6 +12,7 @@ import ChibiDecorations from '@/components/ChibiDecorations';
 import OpeningAnimation from '@/components/OpeningAnimation';
 import TransitionScreen from '@/components/TransitionScreen';
 import FloatingMessages from '@/components/FloatingMessages';
+import MediaReveal from '@/components/MediaReveal';
 import MusicToggle from '@/components/MusicToggle';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 
@@ -239,14 +240,24 @@ const GiftPage = () => {
                 </motion.p>
               </motion.div>
 
-              {gift.photos.length > 0 && (
+              {/* Media Reveal - Video or Photo slideshow */}
+              {(gift.photos.length > 0 || gift.video_url) && (
+                <MediaReveal
+                  photos={gift.photos}
+                  videoUrl={gift.video_url}
+                  delay={1.8}
+                />
+              )}
+
+              {/* Individual polaroid photos below if video is primary */}
+              {gift.video_url && gift.photos.length > 0 && (
                 <div className="space-y-6">
                   {gift.photos.map((photo, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, y: 50, rotate: i % 2 === 0 ? -5 : 5, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, rotate: i % 2 === 0 ? -2 : 2, scale: 1 }}
-                      transition={{ delay: 1.8 + i * 0.4, duration: 0.8, type: 'spring' }}
+                      transition={{ delay: 3 + i * 0.4, duration: 0.8, type: 'spring' }}
                       className="glass-card rounded-xl p-3 shadow-xl mx-auto max-w-xs"
                     >
                       <img src={photo} alt={`Memory ${i + 1}`} className="w-full rounded-lg" />

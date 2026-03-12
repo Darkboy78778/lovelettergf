@@ -9,6 +9,7 @@ export interface GiftData {
   recipient_name: string;
   message: string;
   photos: string[];
+  video_url?: string;
   theme: GiftTheme;
   unlock_date?: string;
   password?: string;
@@ -29,6 +30,7 @@ export async function saveGift(data: Omit<GiftData, 'gift_id' | 'created_at'>): 
       theme: data.theme,
       unlock_date: data.unlock_date || null,
       password: data.password || null,
+      video_url: data.video_url || null,
     })
     .select()
     .single();
@@ -44,6 +46,7 @@ export async function saveGift(data: Omit<GiftData, 'gift_id' | 'created_at'>): 
     theme: inserted.theme as GiftTheme,
     unlock_date: inserted.unlock_date || undefined,
     password: inserted.password || undefined,
+    video_url: inserted.video_url || undefined,
     created_at: inserted.created_at,
   };
 }
@@ -66,6 +69,7 @@ export async function getGift(id: string): Promise<GiftData | null> {
     theme: data.theme as GiftTheme,
     unlock_date: data.unlock_date || undefined,
     password: data.password || undefined,
+    video_url: data.video_url || undefined,
     created_at: data.created_at,
   };
 }
