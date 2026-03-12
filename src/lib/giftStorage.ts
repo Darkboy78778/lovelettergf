@@ -46,6 +46,7 @@ export async function saveGift(data: Omit<GiftData, 'gift_id' | 'created_at'>): 
     theme: inserted.theme as GiftTheme,
     unlock_date: inserted.unlock_date || undefined,
     password: inserted.password || undefined,
+    video_url: inserted.video_url || undefined,
     created_at: inserted.created_at,
   };
 }
