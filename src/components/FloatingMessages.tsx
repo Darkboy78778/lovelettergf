@@ -11,54 +11,34 @@ interface FloatingMessagesProps {
 
 const THEME_MESSAGES: Record<string, string[]> = {
   love: [
-    'I Love You 😘',
-    'You Mean Everything ❤️',
-    'Forever Yours 💕',
-    'My Heart Is Yours 💗',
-    'You Are My World 🌍',
-    'Love You Always 💖',
-    'My Soulmate ✨',
-    'Endlessly In Love 🥰',
+    'I Love You 😘', 'You Mean Everything ❤️', 'Forever Yours 💕',
+    'My Heart Is Yours 💗', 'You Are My World 🌍', 'Love You Always 💖',
+    'My Soulmate ✨', 'Endlessly In Love 🥰', 'You Complete Me 💞',
+    'Always & Forever 🌹', 'Crazy About You 😍', 'My One & Only 💝',
   ],
   birthday: [
-    'Happy Birthday 🎉',
-    'Make A Wish 🎂',
-    'Your Special Day 🥳',
-    'Celebrate You 🎈',
-    'Born To Shine ⭐',
-    'Party Time 🎊',
-    'Another Amazing Year 💫',
-    'Birthday Magic ✨',
+    'Happy Birthday 🎉', 'Make A Wish 🎂', 'Your Special Day 🥳',
+    'Celebrate You 🎈', 'Born To Shine ⭐', 'Party Time 🎊',
+    'Another Amazing Year 💫', 'Birthday Magic ✨', 'Cheers To You 🥂',
+    'You Are A Gift 🎁', 'Blow The Candles 🕯️', 'Hip Hip Hooray 🎶',
   ],
   friendship: [
-    'Happy Friendship Day 💛',
-    'Best Friends Forever 🤝',
-    'True Friendship 💫',
-    'You Are Amazing 🌟',
-    'Grateful For You 🙏',
-    'Friends Like Family 💕',
-    'Together Always 🌈',
-    'Cherished Friend ✨',
+    'Happy Friendship Day 💛', 'Best Friends Forever 🤝', 'True Friendship 💫',
+    'You Are Amazing 🌟', 'Grateful For You 🙏', 'Friends Like Family 💕',
+    'Together Always 🌈', 'Cherished Friend ✨', 'You Rock 🤘',
+    'My Bestie 💜', 'Soul Sister 👯', 'Ride Or Die 🚀',
   ],
   romantic: [
-    'You Are Beautiful 🌹',
-    'My Everything 💋',
-    'Together Forever 💍',
-    'Lost In You 😍',
-    'My Dream Come True 🦋',
-    'Eternally Yours 💝',
-    'You Complete Me 🌸',
-    'My Love Story 📖',
+    'You Are Beautiful 🌹', 'My Everything 💋', 'Together Forever 💍',
+    'Lost In You 😍', 'My Dream Come True 🦋', 'Eternally Yours 💝',
+    'You Complete Me 🌸', 'My Love Story 📖', 'Stolen My Heart 💘',
+    'My Paradise 🏝️', 'Butterflies 🦋', 'Kiss Me 💋',
   ],
   surprise: [
-    'Surprise! 🎉',
-    'Just For You ✨',
-    'You Deserve This 🎁',
-    'Magic Moment 🪄',
-    'Special Delivery 💌',
-    'Unwrap The Joy 🎊',
-    'A Gift Of Love 💝',
-    'Made With Love 💕',
+    'Surprise! 🎉', 'Just For You ✨', 'You Deserve This 🎁',
+    'Magic Moment 🪄', 'Special Delivery 💌', 'Unwrap The Joy 🎊',
+    'A Gift Of Love 💝', 'Made With Love 💕', 'Ta-Da! 🎭',
+    'Open Me 📦', 'Something Special 🌟', 'Just Because 💫',
   ],
 };
 
@@ -66,21 +46,21 @@ interface FloatingMsg {
   id: number;
   text: string;
   x: number;
+  startY: number;
   duration: number;
   size: number;
   opacity: number;
+  delay: number;
 }
 
-const COLUMNS = 5;
-const MAX_VISIBLE = 8;
-const SPAWN_INTERVAL = 1800;
-const FALL_DURATION_MIN = 9;
-const FALL_DURATION_MAX = 13;
+const MAX_VISIBLE = 12;
+const SPAWN_INTERVAL = 800;
 
 const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onComplete }: FloatingMessagesProps) => {
   const [activeMessages, setActiveMessages] = useState<FloatingMsg[]>([]);
   const nextIdRef = useRef(0);
-  const columnIndexRef = useRef(0);
+  const msgIndexRef = useRef(0);
+  const spawnTimerRef = useRef<ReturnType<typeof setInterval>>();
 
   const allMessages = useCallback(() => {
     const themeMessages = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
@@ -89,95 +69,103 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
       `For ${recipientName} 💖`,
       `From ${senderName} ❤️`,
     ];
-    if (specialDate) msgs.push(specialDate);
+    if (specialDate) msgs.push(`${specialDate} 📅`);
     return msgs;
   }, [theme, senderName, recipientName, specialDate]);
 
-  const spawnMessage = useCallback(() => {
+  const spawnMessage = useCallback((initialOffset = false): FloatingMsg => {
     const msgs = allMessages();
-    const col = columnIndexRef.current % COLUMNS;
-    columnIndexRef.current++;
+    const text = msgs[msgIndexRef.current % msgs.length];
+    msgIndexRef.current++;
 
-    // Even distribution across columns with small jitter
-    const colWidth = 80 / COLUMNS;
-    const baseX = 10 + col * colWidth + colWidth / 2;
-    const jitter = (Math.random() - 0.5) * (colWidth * 0.6);
+    // Distribute across screen width using zones
+    const zones = 7;
+    const zone = nextIdRef.current % zones;
+    const zoneWidth = 100 / zones;
+    const baseX = zone * zoneWidth + zoneWidth / 2;
+    const jitter = (Math.random() - 0.5) * (zoneWidth * 0.7);
+    const x = Math.max(5, Math.min(95, baseX + jitter));
 
-    const msg: FloatingMsg = {
-      id: nextIdRef.current++,
-      text: msgs[nextIdRef.current % msgs.length],
-      x: Math.max(8, Math.min(92, baseX + jitter)),
-      duration: FALL_DURATION_MIN + Math.random() * (FALL_DURATION_MAX - FALL_DURATION_MIN),
-      size: 13 + Math.random() * 5,
-      opacity: 0.55 + Math.random() * 0.35,
+    const id = nextIdRef.current++;
+
+    return {
+      id,
+      text,
+      x,
+      startY: initialOffset ? -(Math.random() * 80 + 10) : -10,
+      duration: 7 + Math.random() * 4,
+      size: 14 + Math.random() * 6,
+      opacity: 0.6 + Math.random() * 0.35,
+      delay: initialOffset ? Math.random() * 2 : 0,
     };
-    return msg;
   }, [allMessages]);
 
-  // Continuous spawning
-  useEffect(() => {
-    // Seed initial messages staggered
-    const initial: FloatingMsg[] = [];
-    for (let i = 0; i < 5; i++) {
-      initial.push(spawnMessage());
-    }
-    setActiveMessages(initial);
-
-    const interval = setInterval(() => {
-      setActiveMessages(prev => {
-        if (prev.length >= MAX_VISIBLE) return prev;
-        return [...prev, spawnMessage()];
-      });
-    }, SPAWN_INTERVAL);
-
-    const timer = setTimeout(onComplete, 16000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
-  }, [spawnMessage, onComplete]);
-
-  const handleAnimationComplete = useCallback((id: number) => {
+  const removeMessage = useCallback((id: number) => {
     setActiveMessages(prev => prev.filter(m => m.id !== id));
   }, []);
 
+  useEffect(() => {
+    // Seed initial batch spread across screen
+    const initial: FloatingMsg[] = [];
+    for (let i = 0; i < 8; i++) {
+      initial.push(spawnMessage(true));
+    }
+    setActiveMessages(initial);
+
+    // Continuously spawn new messages
+    spawnTimerRef.current = setInterval(() => {
+      setActiveMessages(prev => {
+        if (prev.length >= MAX_VISIBLE) return prev;
+        return [...prev, spawnMessage(false)];
+      });
+    }, SPAWN_INTERVAL);
+
+    const completeTimer = setTimeout(onComplete, 18000);
+
+    return () => {
+      if (spawnTimerRef.current) clearInterval(spawnTimerRef.current);
+      clearTimeout(completeTimer);
+    };
+  }, [spawnMessage, onComplete]);
+
   return (
     <div className="min-h-screen relative overflow-hidden gradient-romantic">
-      {/* Ambient background glow */}
+      {/* Ambient glow */}
       <div
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-25"
         style={{
-          background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.3), transparent 70%)',
+          background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.35), transparent 70%)',
         }}
       />
 
-      {/* Floating messages with continuous flow */}
+      {/* Floating messages */}
       <AnimatePresence>
         {activeMessages.map((msg) => (
           <motion.div
             key={msg.id}
-            className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none will-change-transform"
+            className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none"
             style={{
               left: `${msg.x}%`,
-              transform: 'translateX(-50%)',
               fontSize: `${msg.size}px`,
-              textShadow: '0 0 16px hsl(var(--primary) / 0.3), 0 2px 10px hsl(var(--background) / 0.6)',
+              textShadow: '0 0 20px hsl(var(--primary) / 0.4), 0 2px 8px hsl(var(--background) / 0.7)',
+              x: '-50%',
             }}
-            initial={{ top: '-8%', opacity: 0, scale: 0.85 }}
+            initial={{
+              y: `${msg.startY}vh`,
+              opacity: 0,
+              scale: 0.8,
+            }}
             animate={{
-              top: '108%',
-              opacity: [0, msg.opacity * 0.7, msg.opacity, msg.opacity, msg.opacity * 0.5, 0],
-              scale: [0.85, 1, 1, 1, 0.95, 0.9],
+              y: '110vh',
+              opacity: [0, msg.opacity, msg.opacity, msg.opacity, 0],
+              scale: [0.8, 1, 1, 1, 0.9],
             }}
-            exit={{ opacity: 0 }}
             transition={{
-              duration: msg.duration,
-              ease: 'linear',
-              opacity: { times: [0, 0.08, 0.15, 0.75, 0.9, 1] },
-              scale: { times: [0, 0.1, 0.2, 0.8, 0.9, 1] },
+              y: { duration: msg.duration, ease: 'linear', delay: msg.delay },
+              opacity: { duration: msg.duration, times: [0, 0.08, 0.4, 0.85, 1], delay: msg.delay },
+              scale: { duration: msg.duration, times: [0, 0.1, 0.4, 0.85, 1], delay: msg.delay },
             }}
-            onAnimationComplete={() => handleAnimationComplete(msg.id)}
+            onAnimationComplete={() => removeMessage(msg.id)}
           >
             {msg.text}
           </motion.div>
@@ -207,12 +195,12 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         </div>
       </motion.div>
 
-      {/* Skip/tap hint */}
+      {/* Skip hint */}
       <motion.button
         className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 font-body text-sm text-muted-foreground"
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.7, 0.7] }}
-        transition={{ delay: 6, duration: 1 }}
+        animate={{ opacity: [0, 0.7] }}
+        transition={{ delay: 5, duration: 1 }}
         onClick={onComplete}
       >
         Tap to continue →
