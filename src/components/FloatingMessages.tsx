@@ -93,7 +93,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     const left = clamp(baseLeft + jitter, 4, 96);
 
     const duration = DURATION_MIN + Math.random() * (DURATION_MAX - DURATION_MIN);
-    const delay = seeded ? Math.random() * 1.4 : 0;
+    const delay = seeded ? seedIndex * 0.6 : 0;
 
     return {
       id: nextIdRef.current++,
