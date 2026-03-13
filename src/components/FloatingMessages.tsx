@@ -161,7 +161,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
               opacity: var(--msg-opacity, 0.85);
             }
             100% {
-              transform: translate3d(calc(-50% + var(--msg-drift, 0px)), 112vh, 0);
+              transform: translate3d(-50%, 112vh, 0);
               opacity: 0;
             }
           }
