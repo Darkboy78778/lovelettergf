@@ -45,7 +45,8 @@ const GiftPage = () => {
 
   const handleFloatingComplete = useCallback(() => {
     setStage('revealed');
-  }, []);
+    stop();
+  }, [stop]);
 
   if (loading) {
     return (
