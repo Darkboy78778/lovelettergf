@@ -109,9 +109,8 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
   };
 
   useEffect(() => {
-    // Seed enough messages so the screen never starts sparse.
     const now = performance.now();
-    const seeded: FloatingMsg[] = Array.from({ length: MIN_VISIBLE }, () => createMessage(true, now));
+    const seeded: FloatingMsg[] = Array.from({ length: SEED_COUNT }, (_, i) => createMessage(true, now, i));
     setActiveMessages(seeded);
 
     const spawnTimer = window.setInterval(() => {
