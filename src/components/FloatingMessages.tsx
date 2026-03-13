@@ -55,11 +55,12 @@ interface FloatingMsg {
 }
 
 const COLUMNS = 9;
-const SPAWN_INTERVAL_MS = 650;
-const MIN_VISIBLE = 10;
-const HARD_LIMIT = 20;
-const DURATION_MIN = 8.5;
-const DURATION_MAX = 10.8;
+const SPAWN_INTERVAL_MS = 700;
+const MIN_VISIBLE = 8;
+const HARD_LIMIT = 16;
+const DURATION_MIN = 10;
+const DURATION_MAX = 13;
+const SEED_COUNT = 5;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
