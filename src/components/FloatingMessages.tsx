@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 interface FloatingMessagesProps {
   theme: string;
@@ -45,91 +45,129 @@ const THEME_MESSAGES: Record<string, string[]> = {
 interface FloatingMsg {
   id: number;
   text: string;
-  x: number;
-  startY: number;
+  left: number;
   duration: number;
+  delay: number;
   size: number;
   opacity: number;
-  delay: number;
+  drift: number;
+  expiresAt: number;
 }
 
-const MAX_VISIBLE = 12;
-const SPAWN_INTERVAL = 800;
+const COLUMNS = 9;
+const SPAWN_INTERVAL_MS = 650;
+const MIN_VISIBLE = 10;
+const HARD_LIMIT = 20;
+const DURATION_MIN = 8.5;
+const DURATION_MAX = 10.8;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onComplete }: FloatingMessagesProps) => {
   const [activeMessages, setActiveMessages] = useState<FloatingMsg[]>([]);
+
   const nextIdRef = useRef(0);
   const msgIndexRef = useRef(0);
-  const spawnTimerRef = useRef<ReturnType<typeof setInterval>>();
+  const columnCursorRef = useRef(0);
 
-  const allMessages = useCallback(() => {
+  const messagesPool = useMemo(() => {
     const themeMessages = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
-    const msgs = [
-      ...themeMessages,
-      `For ${recipientName} 💖`,
-      `From ${senderName} ❤️`,
-    ];
-    if (specialDate) msgs.push(`${specialDate} 📅`);
-    return msgs;
+    const dynamicMessages = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
+
+    if (specialDate) dynamicMessages.push(`${specialDate} 📅`);
+
+    return [...themeMessages, ...dynamicMessages];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const spawnMessage = useCallback((initialOffset = false): FloatingMsg => {
-    const msgs = allMessages();
-    const text = msgs[msgIndexRef.current % msgs.length];
-    msgIndexRef.current++;
+  const createMessage = (seeded = false, now = performance.now()): FloatingMsg => {
+    const text = messagesPool[msgIndexRef.current % messagesPool.length];
+    msgIndexRef.current += 1;
 
-    // Distribute across screen width using zones
-    const zones = 7;
-    const zone = nextIdRef.current % zones;
-    const zoneWidth = 100 / zones;
-    const baseX = zone * zoneWidth + zoneWidth / 2;
-    const jitter = (Math.random() - 0.5) * (zoneWidth * 0.7);
-    const x = Math.max(5, Math.min(95, baseX + jitter));
+    const col = columnCursorRef.current % COLUMNS;
+    columnCursorRef.current += 1;
 
-    const id = nextIdRef.current++;
+    const colWidth = 100 / COLUMNS;
+    const baseLeft = col * colWidth + colWidth / 2;
+    const jitter = (Math.random() - 0.5) * (colWidth * 0.45);
+    const left = clamp(baseLeft + jitter, 4, 96);
+
+    const duration = DURATION_MIN + Math.random() * (DURATION_MAX - DURATION_MIN);
+    const delay = seeded ? Math.random() * 1.4 : 0;
 
     return {
-      id,
+      id: nextIdRef.current++,
       text,
-      x,
-      startY: initialOffset ? -(Math.random() * 80 + 10) : -10,
-      duration: 7 + Math.random() * 4,
+      left,
+      duration,
+      delay,
       size: 14 + Math.random() * 6,
-      opacity: 0.6 + Math.random() * 0.35,
-      delay: initialOffset ? Math.random() * 2 : 0,
+      opacity: 0.68 + Math.random() * 0.28,
+      drift: (Math.random() - 0.5) * 18,
+      expiresAt: now + (duration + delay) * 1000 + 200,
     };
-  }, [allMessages]);
-
-  const removeMessage = useCallback((id: number) => {
-    setActiveMessages(prev => prev.filter(m => m.id !== id));
-  }, []);
+  };
 
   useEffect(() => {
-    // Seed initial batch spread across screen
-    const initial: FloatingMsg[] = [];
-    for (let i = 0; i < 8; i++) {
-      initial.push(spawnMessage(true));
-    }
-    setActiveMessages(initial);
+    // Seed enough messages so the screen never starts sparse.
+    const now = performance.now();
+    const seeded: FloatingMsg[] = Array.from({ length: MIN_VISIBLE }, () => createMessage(true, now));
+    setActiveMessages(seeded);
 
-    // Continuously spawn new messages
-    spawnTimerRef.current = setInterval(() => {
-      setActiveMessages(prev => {
-        if (prev.length >= MAX_VISIBLE) return prev;
-        return [...prev, spawnMessage(false)];
+    const spawnTimer = window.setInterval(() => {
+      const tickNow = performance.now();
+
+      setActiveMessages((prev) => {
+        const alive = prev.filter((msg) => msg.expiresAt > tickNow);
+        const next = [...alive];
+
+        if (next.length < MIN_VISIBLE) {
+          const needed = MIN_VISIBLE - next.length;
+          for (let i = 0; i < needed; i += 1) {
+            next.push(createMessage(false, tickNow));
+          }
+        } else {
+          next.push(createMessage(false, tickNow));
+        }
+
+        if (next.length > HARD_LIMIT) {
+          return next.slice(next.length - HARD_LIMIT);
+        }
+
+        return next;
       });
-    }, SPAWN_INTERVAL);
+    }, SPAWN_INTERVAL_MS);
 
-    const completeTimer = setTimeout(onComplete, 18000);
+    const completeTimer = window.setTimeout(onComplete, 18000);
 
     return () => {
-      if (spawnTimerRef.current) clearInterval(spawnTimerRef.current);
-      clearTimeout(completeTimer);
+      window.clearInterval(spawnTimer);
+      window.clearTimeout(completeTimer);
     };
-  }, [spawnMessage, onComplete]);
+  }, [onComplete, messagesPool]);
 
   return (
     <div className="min-h-screen relative overflow-hidden gradient-romantic">
+      <style>
+        {`
+          @keyframes floating-message-fall {
+            0% {
+              transform: translate3d(-50%, -12vh, 0);
+              opacity: 0;
+            }
+            10% {
+              opacity: var(--msg-opacity, 0.85);
+            }
+            88% {
+              opacity: var(--msg-opacity, 0.85);
+            }
+            100% {
+              transform: translate3d(calc(-50% + var(--msg-drift, 0px)), 112vh, 0);
+              opacity: 0;
+            }
+          }
+        `}
+      </style>
+
       {/* Ambient glow */}
       <div
         className="absolute inset-0 opacity-25"
@@ -139,38 +177,29 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
       />
 
       {/* Floating messages */}
-      <AnimatePresence>
-        {activeMessages.map((msg) => (
-          <motion.div
-            key={msg.id}
-            className="absolute font-display font-semibold text-primary whitespace-nowrap pointer-events-none"
-            style={{
-              left: `${msg.x}%`,
-              fontSize: `${msg.size}px`,
-              textShadow: '0 0 20px hsl(var(--primary) / 0.4), 0 2px 8px hsl(var(--background) / 0.7)',
-              x: '-50%',
-            }}
-            initial={{
-              y: `${msg.startY}vh`,
-              opacity: 0,
-              scale: 0.8,
-            }}
-            animate={{
-              y: '110vh',
-              opacity: [0, msg.opacity, msg.opacity, msg.opacity, 0],
-              scale: [0.8, 1, 1, 1, 0.9],
-            }}
-            transition={{
-              y: { duration: msg.duration, ease: 'linear', delay: msg.delay },
-              opacity: { duration: msg.duration, times: [0, 0.08, 0.4, 0.85, 1], delay: msg.delay },
-              scale: { duration: msg.duration, times: [0, 0.1, 0.4, 0.85, 1], delay: msg.delay },
-            }}
-            onAnimationComplete={() => removeMessage(msg.id)}
-          >
-            {msg.text}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {activeMessages.map((msg) => {
+          const messageStyle = {
+            left: `${msg.left}%`,
+            fontSize: `${msg.size}px`,
+            textShadow: '0 0 18px hsl(var(--primary) / 0.38), 0 2px 10px hsl(var(--background) / 0.72)',
+            willChange: 'transform, opacity',
+            animation: `floating-message-fall ${msg.duration}s linear ${msg.delay}s forwards`,
+            ['--msg-drift' as const]: `${msg.drift}px`,
+            ['--msg-opacity' as const]: String(msg.opacity),
+          } as CSSProperties;
+
+          return (
+            <div
+              key={msg.id}
+              className="absolute top-0 font-display font-semibold text-primary whitespace-nowrap"
+              style={messageStyle}
+            >
+              {msg.text}
+            </div>
+          );
+        })}
+      </div>
 
       {/* Center focus message */}
       <motion.div
@@ -183,8 +212,8 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
           <motion.p
             className="font-display text-3xl md:text-4xl font-bold text-primary"
             style={{ textShadow: '0 4px 24px hsl(var(--primary) / 0.35)' }}
-            animate={{ scale: [0.95, 1.03, 0.95] }}
-            transition={{ duration: 4, repeat: Infinity }}
+            animate={{ scale: [0.98, 1.02, 0.98] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           >
             {theme === 'birthday' && `Happy Birthday ${recipientName}! 🎉`}
             {theme === 'friendship' && `For My Dearest Friend 💛`}
