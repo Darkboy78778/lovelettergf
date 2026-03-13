@@ -65,7 +65,7 @@ const MediaReveal = ({ photos, videoUrl, delay = 1.8 }: MediaRevealProps) => {
                 src={videoUrl}
                 controls
                 playsInline
-                muted
+                autoPlay
                 className="w-full rounded-2xl"
                 style={{ maxHeight: '360px', objectFit: 'cover' }}
               />

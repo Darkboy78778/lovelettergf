@@ -197,6 +197,15 @@ const GiftPage = () => {
             <FloatingHearts count={8} />
             <SparkleParticles count={15} />
             <div className="relative z-10 max-w-lg mx-auto">
+              {/* Media Reveal - Video or Photo slideshow ABOVE the letter */}
+              {(gift.photos.length > 0 || gift.video_url) && (
+                <MediaReveal
+                  photos={gift.photos}
+                  videoUrl={gift.video_url}
+                  delay={0.5}
+                />
+              )}
+
               <motion.div
                 initial={{ opacity: 0, y: 60, rotateX: 30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
@@ -239,15 +248,6 @@ const GiftPage = () => {
                   With love, {gift.sender_name} 💕
                 </motion.p>
               </motion.div>
-
-              {/* Media Reveal - Video or Photo slideshow */}
-              {(gift.photos.length > 0 || gift.video_url) && (
-                <MediaReveal
-                  photos={gift.photos}
-                  videoUrl={gift.video_url}
-                  delay={1.8}
-                />
-              )}
 
               {/* Individual polaroid photos below if video is primary */}
               {gift.video_url && gift.photos.length > 0 && (
