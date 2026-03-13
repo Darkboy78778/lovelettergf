@@ -55,11 +55,12 @@ interface FloatingMsg {
 }
 
 const COLUMNS = 9;
-const SPAWN_INTERVAL_MS = 650;
-const MIN_VISIBLE = 10;
-const HARD_LIMIT = 20;
-const DURATION_MIN = 8.5;
-const DURATION_MAX = 10.8;
+const SPAWN_INTERVAL_MS = 700;
+const MIN_VISIBLE = 8;
+const HARD_LIMIT = 16;
+const DURATION_MIN = 10;
+const DURATION_MAX = 13;
+const SEED_COUNT = 5;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -79,7 +80,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     return [...themeMessages, ...dynamicMessages];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const createMessage = (seeded = false, now = performance.now()): FloatingMsg => {
+  const createMessage = (seeded = false, now = performance.now(), seedIndex = 0): FloatingMsg => {
     const text = messagesPool[msgIndexRef.current % messagesPool.length];
     msgIndexRef.current += 1;
 
@@ -92,7 +93,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     const left = clamp(baseLeft + jitter, 4, 96);
 
     const duration = DURATION_MIN + Math.random() * (DURATION_MAX - DURATION_MIN);
-    const delay = seeded ? Math.random() * 1.4 : 0;
+    const delay = seeded ? seedIndex * 0.6 : 0;
 
     return {
       id: nextIdRef.current++,
@@ -108,9 +109,8 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
   };
 
   useEffect(() => {
-    // Seed enough messages so the screen never starts sparse.
     const now = performance.now();
-    const seeded: FloatingMsg[] = Array.from({ length: MIN_VISIBLE }, () => createMessage(true, now));
+    const seeded: FloatingMsg[] = Array.from({ length: SEED_COUNT }, (_, i) => createMessage(true, now, i));
     setActiveMessages(seeded);
 
     const spawnTimer = window.setInterval(() => {
