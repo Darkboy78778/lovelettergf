@@ -80,7 +80,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     return [...themeMessages, ...dynamicMessages];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const createMessage = (seeded = false, now = performance.now()): FloatingMsg => {
+  const createMessage = (seeded = false, now = performance.now(), seedIndex = 0): FloatingMsg => {
     const text = messagesPool[msgIndexRef.current % messagesPool.length];
     msgIndexRef.current += 1;
 
