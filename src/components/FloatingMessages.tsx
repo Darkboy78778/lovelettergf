@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 
 interface FloatingMessagesProps {
   theme: string;
@@ -42,166 +42,145 @@ const THEME_MESSAGES: Record<string, string[]> = {
   ],
 };
 
-interface FloatingMsg {
+interface FallingMsg {
   id: number;
   text: string;
-  left: number;
+  xPercent: number;
   duration: number;
-  delay: number;
-  size: number;
+  startOffset: number; // negative px above viewport
+  fontSize: number;
   opacity: number;
-  drift: number;
-  expiresAt: number;
 }
 
-const COLUMNS = 9;
-const SPAWN_INTERVAL_MS = 650;
-const MIN_VISIBLE = 10;
-const HARD_LIMIT = 20;
-const DURATION_MIN = 8.5;
-const DURATION_MAX = 10.8;
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const POOL_SIZE = 10;
+const COLUMNS = 5;
 
 const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onComplete }: FloatingMessagesProps) => {
-  const [activeMessages, setActiveMessages] = useState<FloatingMsg[]>([]);
+  const [messages, setMessages] = useState<FallingMsg[]>([]);
+  const nextId = useRef(0);
+  const msgIdx = useRef(0);
+  const colCursor = useRef(0);
 
-  const nextIdRef = useRef(0);
-  const msgIndexRef = useRef(0);
-  const columnCursorRef = useRef(0);
-
-  const messagesPool = useMemo(() => {
-    const themeMessages = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
-    const dynamicMessages = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
-
-    if (specialDate) dynamicMessages.push(`${specialDate} 📅`);
-
-    return [...themeMessages, ...dynamicMessages];
+  const pool = useMemo(() => {
+    const base = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
+    const extras = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
+    if (specialDate) extras.push(`${specialDate} 📅`);
+    return [...base, ...extras];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const createMessage = (seeded = false, now = performance.now()): FloatingMsg => {
-    const text = messagesPool[msgIndexRef.current % messagesPool.length];
-    msgIndexRef.current += 1;
+  const makeMsg = useCallback((stagger = 0): FallingMsg => {
+    const text = pool[msgIdx.current % pool.length];
+    msgIdx.current++;
 
-    const col = columnCursorRef.current % COLUMNS;
-    columnCursorRef.current += 1;
-
-    const colWidth = 100 / COLUMNS;
-    const baseLeft = col * colWidth + colWidth / 2;
-    const jitter = (Math.random() - 0.5) * (colWidth * 0.45);
-    const left = clamp(baseLeft + jitter, 4, 96);
-
-    const duration = DURATION_MIN + Math.random() * (DURATION_MAX - DURATION_MIN);
-    const delay = seeded ? Math.random() * 1.4 : 0;
+    // Even column distribution with jitter
+    const col = colCursor.current % COLUMNS;
+    colCursor.current++;
+    const colW = 100 / COLUMNS;
+    const jitter = (Math.random() - 0.5) * colW * 0.5;
+    const xPercent = Math.max(3, Math.min(97, col * colW + colW / 2 + jitter));
 
     return {
-      id: nextIdRef.current++,
+      id: nextId.current++,
       text,
-      left,
-      duration,
-      delay,
-      size: 14 + Math.random() * 6,
-      opacity: 0.68 + Math.random() * 0.28,
-      drift: 0,
-      expiresAt: now + (duration + delay) * 1000 + 200,
+      xPercent,
+      duration: 9 + Math.random() * 3, // 9-12s
+      startOffset: -(50 + Math.random() * 100), // -50 to -150px above viewport
+      fontSize: 13 + Math.random() * 5,
+      opacity: 0.7 + Math.random() * 0.25,
     };
-  };
+  }, [pool]);
 
   useEffect(() => {
-    // Seed enough messages so the screen never starts sparse.
-    const now = performance.now();
-    const seeded: FloatingMsg[] = Array.from({ length: MIN_VISIBLE }, () => createMessage(true, now));
-    setActiveMessages(seeded);
+    // Seed initial messages with staggered animation delays
+    const initial: FallingMsg[] = [];
+    for (let i = 0; i < POOL_SIZE; i++) {
+      const m = makeMsg();
+      // Stagger: spread initial messages across the fall so they don't all start at top
+      m.duration = 9 + Math.random() * 3;
+      initial.push(m);
+    }
+    setMessages(initial);
 
-    const spawnTimer = window.setInterval(() => {
-      const tickNow = performance.now();
-
-      setActiveMessages((prev) => {
-        const alive = prev.filter((msg) => msg.expiresAt > tickNow);
-        const next = [...alive];
-
-        if (next.length < MIN_VISIBLE) {
-          const needed = MIN_VISIBLE - next.length;
-          for (let i = 0; i < needed; i += 1) {
-            next.push(createMessage(false, tickNow));
+    // Respawn: check periodically and replace finished messages
+    const interval = setInterval(() => {
+      setMessages(prev => {
+        // Keep pool size constant - just cycle messages
+        if (prev.length < POOL_SIZE) {
+          const newMsgs = [...prev];
+          while (newMsgs.length < POOL_SIZE) {
+            newMsgs.push(makeMsg());
           }
-        } else {
-          next.push(createMessage(false, tickNow));
+          return newMsgs;
         }
-
-        if (next.length > HARD_LIMIT) {
-          return next.slice(next.length - HARD_LIMIT);
-        }
-
-        return next;
+        return prev;
       });
-    }, SPAWN_INTERVAL_MS);
+    }, 800);
 
-    const completeTimer = window.setTimeout(onComplete, 18000);
+    const completeTimer = setTimeout(onComplete, 18000);
 
     return () => {
-      window.clearInterval(spawnTimer);
-      window.clearTimeout(completeTimer);
+      clearInterval(interval);
+      clearTimeout(completeTimer);
     };
-  }, [onComplete, messagesPool]);
+  }, [makeMsg, onComplete]);
+
+  // When animation ends on a message, replace it
+  const handleAnimEnd = useCallback((id: number) => {
+    setMessages(prev => prev.map(m => m.id === id ? makeMsg() : m));
+  }, [makeMsg]);
+
+  // Stagger initial messages so they appear at different vertical positions
+  const staggerDelays = useRef<Map<number, number>>(new Map());
+  const getDelay = (msg: FallingMsg, index: number) => {
+    if (!staggerDelays.current.has(msg.id)) {
+      // First batch gets staggered delays so screen fills naturally
+      if (nextId.current <= POOL_SIZE + 5) {
+        staggerDelays.current.set(msg.id, index * 0.8 + Math.random() * 0.5);
+      } else {
+        staggerDelays.current.set(msg.id, 0);
+      }
+    }
+    return staggerDelays.current.get(msg.id) || 0;
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden gradient-romantic">
-      <style>
-        {`
-          @keyframes floating-message-fall {
-            0% {
-              transform: translate3d(-50%, -12vh, 0);
-              opacity: 0;
-            }
-            10% {
-              opacity: var(--msg-opacity, 0.85);
-            }
-            88% {
-              opacity: var(--msg-opacity, 0.85);
-            }
-            100% {
-              transform: translate3d(-50%, 112vh, 0);
-              opacity: 0;
-            }
-          }
-        `}
-      </style>
+      <style>{`
+        @keyframes msg-fall {
+          from { transform: translateY(0); }
+          to { transform: translateY(calc(100vh + 200px)); }
+        }
+      `}</style>
 
-      {/* Ambient glow */}
+      {/* Subtle ambient glow */}
       <div
-        className="absolute inset-0 opacity-25"
-        style={{
-          background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.35), transparent 70%)',
-        }}
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.3), transparent 70%)' }}
       />
 
-      {/* Floating messages */}
+      {/* Falling messages */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {activeMessages.map((msg) => {
-          const messageStyle = {
-            left: `${msg.left}%`,
-            fontSize: `${msg.size}px`,
-            textShadow: '0 0 18px hsl(var(--primary) / 0.38), 0 2px 10px hsl(var(--background) / 0.72)',
-            willChange: 'transform, opacity',
-            animation: `floating-message-fall ${msg.duration}s linear ${msg.delay}s forwards`,
-            ['--msg-drift' as const]: `${msg.drift}px`,
-            ['--msg-opacity' as const]: String(msg.opacity),
-          } as CSSProperties;
-
-          return (
-            <div
-              key={msg.id}
-              className="absolute top-0 font-display font-semibold text-primary whitespace-nowrap"
-              style={messageStyle}
-            >
-              {msg.text}
-            </div>
-          );
-        })}
+        {messages.map((msg, i) => (
+          <div
+            key={msg.id}
+            onAnimationEnd={() => handleAnimEnd(msg.id)}
+            className="absolute whitespace-nowrap font-display font-semibold text-primary"
+            style={{
+              left: `${msg.xPercent}%`,
+              top: `${msg.startOffset}px`,
+              fontSize: `${msg.fontSize}px`,
+              opacity: msg.opacity,
+              transform: 'translateX(-50%)',
+              animation: `msg-fall ${msg.duration}s linear ${getDelay(msg, i)}s forwards`,
+              willChange: 'transform',
+            }}
+          >
+            {msg.text}
+          </div>
+        ))}
       </div>
 
-      {/* Center focus message */}
+      {/* Center focus */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
         initial={{ opacity: 0 }}
@@ -211,7 +190,6 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         <div className="text-center px-6">
           <motion.p
             className="font-display text-3xl md:text-4xl font-bold text-primary"
-            style={{ textShadow: '0 4px 24px hsl(var(--primary) / 0.35)' }}
             animate={{ scale: [0.98, 1.02, 0.98] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           >
@@ -224,11 +202,11 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         </div>
       </motion.div>
 
-      {/* Skip hint */}
+      {/* Skip */}
       <motion.button
         className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 font-body text-sm text-muted-foreground"
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.7] }}
+        animate={{ opacity: 0.7 }}
         transition={{ delay: 5, duration: 1 }}
         onClick={onComplete}
       >
