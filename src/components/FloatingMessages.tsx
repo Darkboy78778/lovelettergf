@@ -46,152 +46,105 @@ interface FallingMessage {
   id: number;
   text: string;
   xPercent: number;
-  startY: number;
+  delay: number;      // seconds before animation starts
+  duration: number;    // fall duration in seconds
   fontSize: number;
   opacity: number;
 }
 
-const ACTIVE_POOL_SIZE = 12;
-const FALL_DURATION_SECONDS = 12.8;
-const EXIT_BUFFER_PX = 180;
-const SEED_BAND_OFFSETS = [90, 250];
-const RESPAWN_START_MIN = 60;
-const RESPAWN_START_MAX = 140;
-const ZONE_LANES = [
-  [10, 25],
-  [42, 58],
-  [75, 90],
-] as const;
-const TOTAL_LANES = ZONE_LANES.reduce((count, zone) => count + zone.length, 0);
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+// 14 messages total, staggered so ~1 new message enters every ~1s
+const POOL_SIZE = 14;
+const FALL_DURATION_MIN = 10;
+const FALL_DURATION_MAX = 14;
+// 7 fixed X lanes so messages spread evenly
+const X_LANES = [8, 22, 36, 50, 64, 78, 92];
 
 const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onComplete }: FloatingMessagesProps) => {
   const [messages, setMessages] = useState<FallingMessage[]>([]);
-
   const nextIdRef = useRef(0);
-  const messageCursorRef = useRef(0);
-  const zoneCursorRef = useRef(0);
-  const laneCursorRef = useRef([0, 0, 0]);
-  const seedCursorRef = useRef(0);
+  const msgCursorRef = useRef(0);
+  const laneCursorRef = useRef(0);
 
-  const messagesPool = useMemo(() => {
-    const themeMessages = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
-    const dynamicMessages = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
-
-    if (specialDate) dynamicMessages.push(`${specialDate} 📅`);
-
-    return [...themeMessages, ...dynamicMessages];
+  const pool = useMemo(() => {
+    const base = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
+    const extras = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
+    if (specialDate) extras.push(`${specialDate} 📅`);
+    return [...base, ...extras];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const getLanePosition = useCallback(() => {
-    const zoneIndex = zoneCursorRef.current % ZONE_LANES.length;
-    zoneCursorRef.current += 1;
-
-    const laneIndex = laneCursorRef.current[zoneIndex] % ZONE_LANES[zoneIndex].length;
-    laneCursorRef.current[zoneIndex] += 1;
-
-    const baseX = ZONE_LANES[zoneIndex][laneIndex];
-    const jitter = (Math.random() - 0.5) * 3;
-
-    return clamp(baseX + jitter, 6, 94);
+  const pickLane = useCallback(() => {
+    const lane = X_LANES[laneCursorRef.current % X_LANES.length];
+    laneCursorRef.current++;
+    const jitter = (Math.random() - 0.5) * 4;
+    return Math.max(4, Math.min(96, lane + jitter));
   }, []);
 
-  const createMessage = useCallback((mode: 'seed' | 'respawn' = 'respawn'): FallingMessage => {
-    const text = messagesPool[messageCursorRef.current % messagesPool.length];
-    messageCursorRef.current += 1;
-
-    const xPercent = getLanePosition();
-
-    let startY = -(RESPAWN_START_MIN + Math.random() * (RESPAWN_START_MAX - RESPAWN_START_MIN));
-
-    if (mode === 'seed') {
-      const bandIndex = Math.floor(seedCursorRef.current / TOTAL_LANES) % SEED_BAND_OFFSETS.length;
-      seedCursorRef.current += 1;
-      startY = -(SEED_BAND_OFFSETS[bandIndex] + Math.random() * 60);
-    }
-
+  const createMessage = useCallback((delay: number): FallingMessage => {
+    const text = pool[msgCursorRef.current % pool.length];
+    msgCursorRef.current++;
     return {
       id: nextIdRef.current++,
       text,
-      xPercent,
-      startY,
+      xPercent: pickLane(),
+      delay,
+      duration: FALL_DURATION_MIN + Math.random() * (FALL_DURATION_MAX - FALL_DURATION_MIN),
       fontSize: 13 + Math.random() * 3,
-      opacity: 0.78 + Math.random() * 0.14,
+      opacity: 0.75 + Math.random() * 0.2,
     };
-  }, [getLanePosition, messagesPool]);
+  }, [pickLane, pool]);
 
-  const handleAnimationEnd = useCallback((id: number) => {
-    setMessages((prev) => prev.map((message) => (
-      message.id === id ? createMessage('respawn') : message
-    )));
+  const handleAnimEnd = useCallback((id: number) => {
+    // Replace finished message with a new one that starts immediately
+    setMessages(prev => prev.map(m => m.id === id ? createMessage(0) : m));
   }, [createMessage]);
 
   useEffect(() => {
-    nextIdRef.current = 0;
-    messageCursorRef.current = 0;
-    zoneCursorRef.current = 0;
-    laneCursorRef.current = [0, 0, 0];
-    seedCursorRef.current = 0;
+    // Stagger initial batch: each message enters ~1.1s apart
+    const initial = Array.from({ length: POOL_SIZE }, (_, i) =>
+      createMessage(i * 1.1 + Math.random() * 0.4)
+    );
+    setMessages(initial);
 
-    const seededMessages = Array.from({ length: ACTIVE_POOL_SIZE }, () => createMessage('seed'));
-    setMessages(seededMessages);
-
-    const completeTimer = window.setTimeout(onComplete, 18000);
-
-    return () => {
-      window.clearTimeout(completeTimer);
-    };
+    const completeTimer = setTimeout(onComplete, 18000);
+    return () => clearTimeout(completeTimer);
   }, [createMessage, onComplete]);
 
   return (
     <div className="min-h-screen relative overflow-hidden gradient-romantic">
-      <style>
-        {`
-          @keyframes floating-message-fall {
-            from {
-              transform: translate3d(-50%, var(--msg-start-y), 0);
-            }
-            to {
-              transform: translate3d(-50%, calc(100vh + var(--msg-exit-buffer)), 0);
-            }
-          }
-        `}
-      </style>
+      <style>{`
+        @keyframes msg-fall {
+          from { transform: translate3d(-50%, -60px, 0); }
+          to   { transform: translate3d(-50%, calc(100vh + 80px), 0); }
+        }
+      `}</style>
 
+      {/* Subtle glow */}
       <div
         className="absolute inset-0 opacity-15 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.22), transparent 72%)',
-        }}
+        style={{ background: 'radial-gradient(ellipse at 50% 30%, hsl(var(--primary) / 0.2), transparent 70%)' }}
       />
 
+      {/* Falling messages */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {messages.map((message) => {
-          const messageStyle = {
-            left: `${message.xPercent}%`,
-            top: 0,
-            fontSize: `${message.fontSize}px`,
-            opacity: message.opacity,
-            willChange: 'transform',
-            animation: `floating-message-fall ${FALL_DURATION_SECONDS}s linear forwards`,
-            ['--msg-start-y' as const]: `${message.startY}px`,
-            ['--msg-exit-buffer' as const]: `${EXIT_BUFFER_PX}px`,
-          } as CSSProperties;
-
-          return (
-            <div
-              key={message.id}
-              className="absolute whitespace-nowrap font-display font-semibold text-primary"
-              style={messageStyle}
-              onAnimationEnd={() => handleAnimationEnd(message.id)}
-            >
-              {message.text}
-            </div>
-          );
-        })}
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className="absolute top-0 whitespace-nowrap font-display font-semibold text-primary"
+            style={{
+              left: `${msg.xPercent}%`,
+              fontSize: `${msg.fontSize}px`,
+              opacity: msg.opacity,
+              willChange: 'transform',
+              animation: `msg-fall ${msg.duration}s linear ${msg.delay}s both`,
+            } as CSSProperties}
+            onAnimationEnd={() => handleAnimEnd(msg.id)}
+          >
+            {msg.text}
+          </div>
+        ))}
       </div>
 
+      {/* Center focus */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
         initial={{ opacity: 0 }}
@@ -213,10 +166,11 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         </div>
       </motion.div>
 
+      {/* Skip */}
       <motion.button
         className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 font-body text-sm text-muted-foreground"
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.7] }}
+        animate={{ opacity: 0.7 }}
         transition={{ delay: 5, duration: 1 }}
         onClick={onComplete}
       >
