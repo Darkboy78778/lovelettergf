@@ -50,32 +50,55 @@ interface FallingMessage {
   startOffset: number;
   fontSize: number;
   opacity: number;
+  duration: number;
 }
 
-const ACTIVE_POOL_SIZE = 18;
-const FALL_DURATION_SECONDS = 13.5;
-const ENTRY_STAGGER_SECONDS = 0.42;
-const TOP_START_MIN = 90;
-const TOP_START_MAX = 150;
+const FALL_DURATION_SECONDS = 12.4;
+const SPAWN_INTERVAL_MS = 600;
+const INITIAL_ROWS_PER_COLUMN = 5;
+const TOP_START_MIN = 36;
+const TOP_START_MAX = 96;
 const EXIT_BUFFER_PX = 88;
 const VIEWPORT_SIDE_PADDING_PX = 14;
-const ESTIMATED_TEXT_WIDTH_FACTOR = 0.72;
-const ESTIMATED_TEXT_BASE_PX = 42;
-const ZONE_LANES = [
-  [12, 20, 28],
-  [40, 50, 60],
-  [72, 80, 88],
-] as const;
+const FALLBACK_TEXT_WIDTH_FACTOR = 0.56;
+const FALLBACK_TEXT_BASE_PX = 28;
+const COLUMN_ANCHORS = [14, 38, 62, 86] as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const getViewportWidth = () => (typeof window === 'undefined' ? 360 : window.innerWidth);
 
-const estimateTextWidth = (text: string, fontSize: number) => {
+let textMeasureContext: CanvasRenderingContext2D | null = null;
+
+const getTextMeasureContext = () => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  if (!textMeasureContext) {
+    textMeasureContext = document.createElement('canvas').getContext('2d');
+  }
+
+  return textMeasureContext;
+};
+
+const measureTextWidth = (text: string, fontSize: number) => {
   const viewportWidth = getViewportWidth();
+
+  const context = getTextMeasureContext();
+
+  if (context) {
+    context.font = `600 ${fontSize}px ui-serif, Georgia, serif`;
+
+    return Math.min(
+      viewportWidth - VIEWPORT_SIDE_PADDING_PX * 2,
+      Math.max(96, context.measureText(text).width + 20),
+    );
+  }
+
   return Math.min(
     viewportWidth - VIEWPORT_SIDE_PADDING_PX * 2,
-    Math.max(92, text.length * fontSize * ESTIMATED_TEXT_WIDTH_FACTOR + ESTIMATED_TEXT_BASE_PX),
+    Math.max(96, text.length * fontSize * FALLBACK_TEXT_WIDTH_FACTOR + FALLBACK_TEXT_BASE_PX),
   );
 };
 
@@ -84,8 +107,7 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
 
   const nextIdRef = useRef(0);
   const messageCursorRef = useRef(0);
-  const zoneCursorRef = useRef(0);
-  const laneCursorRef = useRef([0, 0, 0]);
+  const columnCursorRef = useRef(0);
 
   const messagesPool = useMemo(() => {
     const themeMessages = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
@@ -98,59 +120,76 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
     return [...themeMessages, ...dynamicMessages];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const getBalancedXPosition = useCallback((text: string, fontSize: number) => {
-    const zoneIndex = zoneCursorRef.current % ZONE_LANES.length;
-    zoneCursorRef.current += 1;
-
-    const laneIndex = laneCursorRef.current[zoneIndex] % ZONE_LANES[zoneIndex].length;
-    laneCursorRef.current[zoneIndex] += 1;
-
-    const baseX = ZONE_LANES[zoneIndex][laneIndex] + (Math.random() - 0.5) * 2.5;
+  const getSafeXPosition = useCallback((text: string, fontSize: number, columnIndex: number) => {
+    const baseX = COLUMN_ANCHORS[columnIndex] + (Math.random() - 0.5) * 1.8;
     const viewportWidth = getViewportWidth();
-    const estimatedWidth = estimateTextWidth(text, fontSize);
-    const safeHalfPercent = ((estimatedWidth / 2) + VIEWPORT_SIDE_PADDING_PX) / viewportWidth * 100;
+    const measuredWidth = measureTextWidth(text, fontSize);
+    const safeHalfPercent = ((measuredWidth / 2) + VIEWPORT_SIDE_PADDING_PX) / viewportWidth * 100;
 
     return clamp(baseX, safeHalfPercent, 100 - safeHalfPercent);
   }, []);
 
-  const createMessage = useCallback((delay: number) => {
+  const createMessage = useCallback((delay: number, forcedColumnIndex?: number) => {
     const text = messagesPool[messageCursorRef.current % messagesPool.length];
     messageCursorRef.current += 1;
 
-    const fontSize = 12.5 + Math.random() * 2.3;
+    const fontSize = 11.6 + Math.random() * 1.4;
+    const columnIndex = forcedColumnIndex ?? (columnCursorRef.current % COLUMN_ANCHORS.length);
+
+    if (forcedColumnIndex === undefined) {
+      columnCursorRef.current += 1;
+    }
 
     return {
       id: nextIdRef.current++,
       text,
-      xPercent: getBalancedXPosition(text, fontSize),
+      xPercent: getSafeXPosition(text, fontSize, columnIndex),
       delay,
       startOffset: TOP_START_MIN + Math.random() * (TOP_START_MAX - TOP_START_MIN),
       fontSize,
-      opacity: 0.8 + Math.random() * 0.12,
+      opacity: 0.86 + Math.random() * 0.08,
+      duration: FALL_DURATION_SECONDS,
     } satisfies FallingMessage;
-  }, [getBalancedXPosition, messagesPool]);
+  }, [getSafeXPosition, messagesPool]);
 
   const handleAnimationEnd = useCallback((id: number) => {
-    setMessages((prev) => prev.map((message) => (
-      message.id === id ? createMessage(0) : message
-    )));
-  }, [createMessage]);
+    setMessages((prev) => prev.filter((message) => message.id !== id));
+  }, []);
 
   useEffect(() => {
     nextIdRef.current = 0;
     messageCursorRef.current = 0;
-    zoneCursorRef.current = 0;
-    laneCursorRef.current = [0, 0, 0];
+    columnCursorRef.current = 0;
 
-    const seededMessages = Array.from({ length: ACTIVE_POOL_SIZE }, (_, index) => (
-      createMessage(index * ENTRY_STAGGER_SECONDS + Math.random() * 0.12)
+    const columnPhaseSeconds = SPAWN_INTERVAL_MS / 1000;
+    const columnGapSeconds = columnPhaseSeconds * COLUMN_ANCHORS.length;
+
+    const seededMessages = COLUMN_ANCHORS.flatMap((_, columnIndex) => (
+      Array.from({ length: INITIAL_ROWS_PER_COLUMN }, (_, rowIndex) => {
+        const elapsedSeconds = Math.min(
+          FALL_DURATION_SECONDS - 0.4,
+          rowIndex * columnGapSeconds + columnIndex * columnPhaseSeconds,
+        );
+
+        return createMessage(-elapsedSeconds, columnIndex);
+      })
     ));
 
     setMessages(seededMessages);
 
+    const spawnTimer = window.setInterval(() => {
+      setMessages((prev) => {
+        const nextColumn = columnCursorRef.current % COLUMN_ANCHORS.length;
+        columnCursorRef.current += 1;
+
+        return [...prev, createMessage(0, nextColumn)];
+      });
+    }, SPAWN_INTERVAL_MS);
+
     const completeTimer = window.setTimeout(onComplete, 18000);
 
     return () => {
+      window.clearInterval(spawnTimer);
       window.clearTimeout(completeTimer);
     };
   }, [createMessage, onComplete]);
@@ -185,8 +224,9 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
             fontSize: `${message.fontSize}px`,
             opacity: message.opacity,
             whiteSpace: 'nowrap',
+            lineHeight: 1.1,
             willChange: 'transform',
-            animation: `floating-message-fall ${FALL_DURATION_SECONDS}s linear ${message.delay}s both`,
+            animation: `floating-message-fall ${message.duration}s linear ${message.delay}s both`,
             ['--msg-start-offset' as const]: String(message.startOffset),
             ['--msg-exit-buffer' as const]: `${EXIT_BUFFER_PX}px`,
           } as CSSProperties;
