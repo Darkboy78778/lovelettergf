@@ -14,7 +14,6 @@ import TransitionScreen from '@/components/TransitionScreen';
 import FloatingMessages from '@/components/FloatingMessages';
 import MediaReveal from '@/components/MediaReveal';
 import MusicToggle from '@/components/MusicToggle';
-import BirthdayBalloons from '@/components/BirthdayBalloons';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 
 type Stage = 'intro' | 'opening' | 'transition' | 'floating' | 'revealed';
@@ -212,9 +211,8 @@ const GiftPage = () => {
                 initial={{ opacity: 0, y: 60, rotateX: 30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
-                className="glass-card rounded-2xl p-8 md:p-10 mb-8 relative"
+                className="glass-card rounded-2xl p-8 md:p-10 mb-8"
               >
-                {gift.theme === 'birthday' && <BirthdayBalloons />}
                 <motion.div
                   className="text-center mb-6"
                   initial={{ scale: 0 }}
