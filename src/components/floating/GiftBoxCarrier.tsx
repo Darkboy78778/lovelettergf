@@ -2,66 +2,44 @@ import { type CSSProperties } from 'react';
 import type { ThemeCarrierProps } from './types';
 
 const BOX_COLORS = [
-  { box: 'hsl(340, 68%, 62%)', ribbon: 'hsl(48, 85%, 68%)' },
-  { box: 'hsl(200, 62%, 58%)', ribbon: 'hsl(0, 72%, 62%)' },
-  { box: 'hsl(278, 58%, 62%)', ribbon: 'hsl(48, 88%, 62%)' },
-  { box: 'hsl(145, 52%, 52%)', ribbon: 'hsl(350, 68%, 62%)' },
-  { box: 'hsl(30, 72%, 58%)', ribbon: 'hsl(200, 62%, 58%)' },
+  { box: 'hsl(340, 65%, 60%)', ribbon: 'hsl(45, 80%, 65%)' },
+  { box: 'hsl(200, 60%, 55%)', ribbon: 'hsl(0, 70%, 60%)' },
+  { box: 'hsl(280, 55%, 60%)', ribbon: 'hsl(45, 85%, 60%)' },
+  { box: 'hsl(140, 50%, 50%)', ribbon: 'hsl(350, 65%, 60%)' },
+  { box: 'hsl(30, 70%, 55%)', ribbon: 'hsl(200, 60%, 55%)' },
 ];
 
 const GiftBoxCarrier = ({ messages, onAnimationEnd }: ThemeCarrierProps) => (
   <>
     <style>{`
       @keyframes giftbox-float {
-        0% {
-          transform: translate(-50%, 110vh) rotate(-3deg) scale(0.5);
-          opacity: 0;
-        }
-        5% {
-          opacity: 1;
-          transform: translate(-50%, 90vh) rotate(1deg) scale(1.04);
-        }
-        10% {
-          transform: translate(-50%, 84vh) rotate(0deg) scale(1);
-        }
-        50% {
-          transform: translate(-50%, 45vh) rotate(2deg) scale(1);
-        }
-        90% {
-          opacity: 0.85;
-        }
-        100% {
-          transform: translate(-50%, -150px) rotate(-1deg) scale(0.9);
-          opacity: 0;
-        }
+        0% { transform: translate(-50%, 100vh) rotate(-5deg); opacity: 0; }
+        6% { opacity: 1; }
+        50% { transform: translate(-50%, 45vh) rotate(3deg); }
+        88% { opacity: 0.9; }
+        100% { transform: translate(-50%, -130px) rotate(-2deg); opacity: 0; }
       }
       @keyframes giftbox-sway {
-        0%   { transform: translateX(0) rotate(0deg); }
-        25%  { transform: translateX(5px) rotate(1.5deg); }
-        50%  { transform: translateX(-3px) rotate(-1deg); }
-        75%  { transform: translateX(6px) rotate(1deg); }
-        100% { transform: translateX(0) rotate(0deg); }
+        0%, 100% { margin-left: 0; }
+        30% { margin-left: 6px; }
+        70% { margin-left: -6px; }
       }
-      @keyframes sparkle-twinkle {
-        0%   { transform: scale(0) rotate(0deg); opacity: 0; }
-        30%  { transform: scale(1.2) rotate(90deg); opacity: 1; }
-        50%  { transform: scale(1) rotate(180deg); opacity: 0.8; }
-        70%  { transform: scale(1.1) rotate(270deg); opacity: 0.9; }
-        100% { transform: scale(0) rotate(360deg); opacity: 0; }
+      @keyframes sparkle-pop {
+        0%, 100% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(1); opacity: 1; }
       }
     `}</style>
 
     {/* Sparkles */}
-    {Array.from({ length: 16 }, (_, i) => (
+    {Array.from({ length: 12 }, (_, i) => (
       <div
         key={`sparkle-${i}`}
         className="absolute pointer-events-none"
         style={{
-          left: `${6 + Math.random() * 88}%`,
-          top: `${5 + Math.random() * 90}%`,
-          fontSize: `${10 + Math.random() * 12}px`,
-          animation: `sparkle-twinkle ${3 + Math.random() * 4}s ease-in-out ${Math.random() * 6}s infinite`,
-          opacity: 0,
+          left: `${8 + Math.random() * 84}%`,
+          top: `${8 + Math.random() * 84}%`,
+          fontSize: `${10 + Math.random() * 10}px`,
+          animation: `sparkle-pop ${2 + Math.random() * 3}s ease-in-out ${Math.random() * 5}s infinite`,
         }}
       >
         ✨
@@ -70,65 +48,65 @@ const GiftBoxCarrier = ({ messages, onAnimationEnd }: ThemeCarrierProps) => (
 
     {messages.map((msg) => {
       const palette = BOX_COLORS[msg.variant % BOX_COLORS.length];
-      const swayDur = 5.5 + (msg.variant % 4);
-      const boxSize = msg.size * 1.15;
+      const swayDur = 3.5 + (msg.variant % 3);
 
       const style: CSSProperties = {
         position: 'absolute',
         left: `${msg.xPercent}%`,
         top: 0,
-        willChange: 'transform, opacity',
-        animation: `giftbox-float ${msg.duration}s cubic-bezier(0.22, 0.61, 0.36, 1) ${msg.delay}s both`,
+        willChange: 'transform',
+        animation: `giftbox-float ${msg.duration}s ease-in-out ${msg.delay}s both`,
       };
 
       return (
-        <div key={msg.id} style={style} onAnimationEnd={() => onAnimationEnd(msg.id)}>
-          <div style={{
-            animation: `giftbox-sway ${swayDur}s ease-in-out infinite`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-          }}>
-            <svg width={boxSize} height={boxSize} viewBox="0 0 60 62" fill="none">
-              <defs>
-                <linearGradient id={`bx${msg.id}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={palette.box} stopOpacity="1" />
-                  <stop offset="100%" stopColor={palette.box} stopOpacity="0.8" />
-                </linearGradient>
-                <filter id={`bs${msg.id}`}><feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor={palette.box} floodOpacity="0.2" /></filter>
-              </defs>
-              {/* Body */}
-              <rect x="6" y="26" width="48" height="30" rx="4" fill={`url(#bx${msg.id})`} filter={`url(#bs${msg.id})`} />
-              <rect x="6" y="44" width="48" height="12" rx="0" fill="black" opacity="0.04" />
-              {/* Lid */}
-              <rect x="3" y="18" width="54" height="11" rx="4" fill={palette.box} />
-              <rect x="3" y="18" width="54" height="5" rx="2" fill="white" opacity="0.12" />
-              {/* Ribbons */}
-              <rect x="27" y="18" width="6" height="38" fill={palette.ribbon} rx="1" />
-              <rect x="3" y="22" width="54" height="4.5" fill={palette.ribbon} rx="1" />
+        <div
+          key={msg.id}
+          style={style}
+          onAnimationEnd={() => onAnimationEnd(msg.id)}
+        >
+          <div
+            style={{
+              animation: `giftbox-sway ${swayDur}s ease-in-out infinite`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            {/* Gift box SVG */}
+            <svg width={msg.size * 1.1} height={msg.size * 1.1} viewBox="0 0 60 60" fill="none">
+              {/* Box body */}
+              <rect x="6" y="24" width="48" height="32" rx="3" fill={palette.box} />
+              <rect x="6" y="24" width="48" height="32" rx="3" fill="black" opacity="0.06" />
+              {/* Box lid */}
+              <rect x="3" y="18" width="54" height="10" rx="3" fill={palette.box} />
+              <rect x="3" y="18" width="54" height="10" rx="3" fill="white" opacity="0.15" />
+              {/* Vertical ribbon */}
+              <rect x="26" y="18" width="8" height="38" fill={palette.ribbon} />
+              {/* Horizontal ribbon */}
+              <rect x="3" y="21" width="54" height="5" fill={palette.ribbon} />
               {/* Bow */}
-              <ellipse cx="23" cy="16" rx="8" ry="5.5" fill={palette.ribbon} />
-              <ellipse cx="37" cy="16" rx="8" ry="5.5" fill={palette.ribbon} />
-              <circle cx="30" cy="17" r="3.5" fill={palette.ribbon} />
-              <circle cx="30" cy="17" r="3.5" fill="white" opacity="0.3" />
-              <ellipse cx="23" cy="14" rx="3" ry="2" fill="white" opacity="0.2" />
+              <ellipse cx="24" cy="16" rx="8" ry="6" fill={palette.ribbon} />
+              <ellipse cx="36" cy="16" rx="8" ry="6" fill={palette.ribbon} />
+              <circle cx="30" cy="17" r="3" fill={palette.ribbon} />
+              <circle cx="30" cy="17" r="3" fill="white" opacity="0.3" />
             </svg>
 
+            {/* Message tag */}
             <div
               className="font-display font-semibold text-center"
               style={{
                 fontSize: `${Math.max(9, msg.size * 0.2)}px`,
-                color: 'hsl(var(--foreground))',
-                background: 'rgba(255,255,255,0.9)',
-                backdropFilter: 'blur(6px)',
-                borderRadius: '10px',
-                padding: '4px 10px',
+                color: 'hsl(340, 20%, 20%)',
+                background: 'rgba(255,255,255,0.88)',
+                borderRadius: '8px',
+                padding: '3px 8px',
                 marginTop: '4px',
-                maxWidth: `${msg.size * 2}px`,
+                maxWidth: `${msg.size * 1.8}px`,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                lineHeight: 1.35,
-                letterSpacing: '-0.01em',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                lineHeight: 1.3,
               }}
             >
               {msg.text}
