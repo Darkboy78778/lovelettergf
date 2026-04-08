@@ -1,10 +1,5 @@
 import { motion } from 'framer-motion';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CarrierMessage } from './floating/types';
-import BalloonCarrier from './floating/BalloonCarrier';
-import HeartCarrier from './floating/HeartCarrier';
-import BubbleCarrier from './floating/BubbleCarrier';
-import GiftBoxCarrier from './floating/GiftBoxCarrier';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 interface FloatingMessagesProps {
   theme: string;
@@ -47,95 +42,173 @@ const THEME_MESSAGES: Record<string, string[]> = {
   ],
 };
 
-const SPAWN_INTERVAL_MS = 1200;
-const POOL_SIZE = 14;
-const LANE_COUNT = 7;
+interface FallingMessage {
+  id: number;
+  text: string;
+  xPercent: number;
+  delay: number;
+  startOffset: number;
+  fontSize: number;
+  opacity: number;
+  duration: number;
+}
+
+const FALL_DURATION_SECONDS = 12.4;
+const SPAWN_INTERVAL_MS = 600;
+const INITIAL_ROWS_PER_COLUMN = 5;
+const TOP_START_MIN = 36;
+const TOP_START_MAX = 96;
+const EXIT_BUFFER_PX = 88;
+const VIEWPORT_SIDE_PADDING_PX = 14;
+const FALLBACK_TEXT_WIDTH_FACTOR = 0.56;
+const FALLBACK_TEXT_BASE_PX = 28;
+const COLUMN_ANCHORS = [14, 38, 62, 86] as const;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const getViewportWidth = () => (typeof window === 'undefined' ? 360 : window.innerWidth);
+
+let textMeasureContext: CanvasRenderingContext2D | null = null;
+
+const getTextMeasureContext = () => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  if (!textMeasureContext) {
+    textMeasureContext = document.createElement('canvas').getContext('2d');
+  }
+
+  return textMeasureContext;
+};
+
+const measureTextWidth = (text: string, fontSize: number) => {
+  const viewportWidth = getViewportWidth();
+
+  const context = getTextMeasureContext();
+
+  if (context) {
+    context.font = `600 ${fontSize}px ui-serif, Georgia, serif`;
+
+    return Math.min(
+      viewportWidth - VIEWPORT_SIDE_PADDING_PX * 2,
+      Math.max(96, context.measureText(text).width + 20),
+    );
+  }
+
+  return Math.min(
+    viewportWidth - VIEWPORT_SIDE_PADDING_PX * 2,
+    Math.max(96, text.length * fontSize * FALLBACK_TEXT_WIDTH_FACTOR + FALLBACK_TEXT_BASE_PX),
+  );
+};
 
 const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onComplete }: FloatingMessagesProps) => {
-  const [messages, setMessages] = useState<CarrierMessage[]>([]);
-  const nextIdRef = useRef(0);
-  const msgCursorRef = useRef(0);
-  const laneCursorRef = useRef(0);
+  const [messages, setMessages] = useState<FallingMessage[]>([]);
 
-  const pool = useMemo(() => {
-    const base = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
-    const dynamic = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
-    if (specialDate) dynamic.push(`${specialDate} 📅`);
-    return [...base, ...dynamic];
+  const nextIdRef = useRef(0);
+  const messageCursorRef = useRef(0);
+  const columnCursorRef = useRef(0);
+
+  const messagesPool = useMemo(() => {
+    const themeMessages = THEME_MESSAGES[theme] || THEME_MESSAGES.love;
+    const dynamicMessages = [`For ${recipientName} 💖`, `From ${senderName} ❤️`];
+
+    if (specialDate) {
+      dynamicMessages.push(`${specialDate} 📅`);
+    }
+
+    return [...themeMessages, ...dynamicMessages];
   }, [theme, senderName, recipientName, specialDate]);
 
-  const createMsg = useCallback((delay: number, laneOverride?: number): CarrierMessage => {
-    const text = pool[msgCursorRef.current % pool.length];
-    msgCursorRef.current += 1;
+  const getSafeXPosition = useCallback((text: string, fontSize: number, columnIndex: number) => {
+    const baseX = COLUMN_ANCHORS[columnIndex] + (Math.random() - 0.5) * 1.8;
+    const viewportWidth = getViewportWidth();
+    const measuredWidth = measureTextWidth(text, fontSize);
+    const safeHalfPercent = ((measuredWidth / 2) + VIEWPORT_SIDE_PADDING_PX) / viewportWidth * 100;
 
-    const lane = laneOverride ?? (laneCursorRef.current % LANE_COUNT);
-    if (laneOverride === undefined) laneCursorRef.current += 1;
+    return clamp(baseX, safeHalfPercent, 100 - safeHalfPercent);
+  }, []);
 
-    const laneWidth = 80 / LANE_COUNT;
-    const baseX = 10 + lane * laneWidth + laneWidth / 2;
-    const jitter = (Math.random() - 0.5) * (laneWidth * 0.5);
-    const xPercent = Math.max(8, Math.min(92, baseX + jitter));
+  const createMessage = useCallback((delay: number, forcedColumnIndex?: number) => {
+    const text = messagesPool[messageCursorRef.current % messagesPool.length];
+    messageCursorRef.current += 1;
+
+    const fontSize = 11.6 + Math.random() * 1.4;
+    const columnIndex = forcedColumnIndex ?? (columnCursorRef.current % COLUMN_ANCHORS.length);
+
+    if (forcedColumnIndex === undefined) {
+      columnCursorRef.current += 1;
+    }
 
     return {
       id: nextIdRef.current++,
       text,
-      xPercent,
+      xPercent: getSafeXPosition(text, fontSize, columnIndex),
       delay,
-      duration: 11 + Math.random() * 3,
-      size: 42 + Math.random() * 14,
-      variant: Math.floor(Math.random() * 7),
-    };
-  }, [pool]);
+      startOffset: TOP_START_MIN + Math.random() * (TOP_START_MAX - TOP_START_MIN),
+      fontSize,
+      opacity: 0.86 + Math.random() * 0.08,
+      duration: FALL_DURATION_SECONDS,
+    } satisfies FallingMessage;
+  }, [getSafeXPosition, messagesPool]);
 
   const handleAnimationEnd = useCallback((id: number) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id));
+    setMessages((prev) => prev.filter((message) => message.id !== id));
   }, []);
 
   useEffect(() => {
     nextIdRef.current = 0;
-    msgCursorRef.current = 0;
-    laneCursorRef.current = 0;
+    messageCursorRef.current = 0;
+    columnCursorRef.current = 0;
 
-    // Seed initial messages staggered
-    const initial: CarrierMessage[] = [];
-    for (let i = 0; i < POOL_SIZE; i++) {
-      const lane = i % LANE_COUNT;
-      const stagger = i * (SPAWN_INTERVAL_MS / 1000) * 0.7;
-      // Negative delay to pre-advance some messages
-      const negDelay = i < 6 ? -(11 - stagger) * Math.random() * 0.5 : stagger;
-      initial.push(createMsg(negDelay < 0 ? negDelay : stagger, lane));
-    }
-    setMessages(initial);
+    const columnPhaseSeconds = SPAWN_INTERVAL_MS / 1000;
+    const columnGapSeconds = columnPhaseSeconds * COLUMN_ANCHORS.length;
 
-    const timer = window.setInterval(() => {
+    const seededMessages = COLUMN_ANCHORS.flatMap((_, columnIndex) => (
+      Array.from({ length: INITIAL_ROWS_PER_COLUMN }, (_, rowIndex) => {
+        const elapsedSeconds = Math.min(
+          FALL_DURATION_SECONDS - 0.4,
+          rowIndex * columnGapSeconds + columnIndex * columnPhaseSeconds,
+        );
+
+        return createMessage(-elapsedSeconds, columnIndex);
+      })
+    ));
+
+    setMessages(seededMessages);
+
+    const spawnTimer = window.setInterval(() => {
       setMessages((prev) => {
-        const lane = laneCursorRef.current % LANE_COUNT;
-        laneCursorRef.current += 1;
-        return [...prev, createMsg(0, lane)];
+        const nextColumn = columnCursorRef.current % COLUMN_ANCHORS.length;
+        columnCursorRef.current += 1;
+
+        return [...prev, createMessage(0, nextColumn)];
       });
     }, SPAWN_INTERVAL_MS);
 
     const completeTimer = window.setTimeout(onComplete, 18000);
 
     return () => {
-      window.clearInterval(timer);
+      window.clearInterval(spawnTimer);
       window.clearTimeout(completeTimer);
     };
-  }, [createMsg, onComplete]);
-
-  const CarrierComponent = useMemo(() => {
-    switch (theme) {
-      case 'birthday': return BalloonCarrier;
-      case 'romantic':
-      case 'love': return HeartCarrier;
-      case 'friendship': return BubbleCarrier;
-      case 'surprise': return GiftBoxCarrier;
-      default: return HeartCarrier;
-    }
-  }, [theme]);
+  }, [createMessage, onComplete]);
 
   return (
     <div className="min-h-screen relative overflow-hidden gradient-romantic">
+      <style>
+        {`
+          @keyframes floating-message-fall {
+            from {
+              transform: translate3d(-50%, calc(var(--msg-start-offset) * -1px), 0);
+            }
+            to {
+              transform: translate3d(-50%, calc(100vh + var(--msg-exit-buffer)), 0);
+            }
+          }
+        `}
+      </style>
+
       <div
         className="absolute inset-0 opacity-15 pointer-events-none"
         style={{
@@ -144,10 +217,33 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
       />
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <CarrierComponent messages={messages} onAnimationEnd={handleAnimationEnd} />
+        {messages.map((message) => {
+          const messageStyle = {
+            left: `${message.xPercent}%`,
+            top: 0,
+            fontSize: `${message.fontSize}px`,
+            opacity: message.opacity,
+            whiteSpace: 'nowrap',
+            lineHeight: 1.1,
+            willChange: 'transform',
+            animation: `floating-message-fall ${message.duration}s linear ${message.delay}s both`,
+            ['--msg-start-offset' as const]: String(message.startOffset),
+            ['--msg-exit-buffer' as const]: `${EXIT_BUFFER_PX}px`,
+          } as CSSProperties;
+
+          return (
+            <div
+              key={message.id}
+              className="absolute font-display font-semibold text-primary"
+              style={messageStyle}
+              onAnimationEnd={() => handleAnimationEnd(message.id)}
+            >
+              {message.text}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Center message */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
         initial={{ opacity: 0 }}
@@ -157,7 +253,6 @@ const FloatingMessages = ({ theme, senderName, recipientName, specialDate, onCom
         <div className="text-center px-6">
           <motion.p
             className="font-display text-3xl md:text-4xl font-bold text-primary"
-            style={{ textShadow: '0 2px 12px rgba(0,0,0,0.1)' }}
             animate={{ scale: [0.985, 1.015, 0.985] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           >
