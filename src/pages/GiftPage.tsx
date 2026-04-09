@@ -187,7 +187,7 @@ const GiftPage = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <FloatingMessages
+            <FloatingMessages3D
               theme={gift.theme}
               senderName={gift.sender_name}
               recipientName={gift.recipient_name}
