@@ -1,7 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Copy, Download, Eye, ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { Copy, Download, Eye, ArrowLeft, Check, Loader2, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { getGift, GiftData } from '@/lib/giftStorage';
 import { useState, useEffect } from 'react';
 import FloatingHearts from '@/components/FloatingHearts';
@@ -12,12 +13,20 @@ const ShareGift = () => {
   const [gift, setGift] = useState<GiftData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [senderToken, setSenderToken] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       if (id) {
         const data = await getGift(id);
         setGift(data);
+        // Fetch sender token
+        const { data: row } = await supabase
+          .from('gifts')
+          .select('sender_token' as any)
+          .eq('gift_id', id)
+          .single();
+        if (row) setSenderToken((row as any).sender_token);
       }
       setLoading(false);
     };
@@ -151,6 +160,14 @@ const ShareGift = () => {
                 Preview Gift
               </Button>
             </Link>
+            {senderToken && (
+              <Link to={`/dashboard/${senderToken}`}>
+                <Button variant="outline" className="rounded-full font-body gap-2 w-full">
+                  <Activity size={16} />
+                  Live Dashboard
+                </Button>
+              </Link>
+            )}
           </motion.div>
         </motion.div>
       </div>
