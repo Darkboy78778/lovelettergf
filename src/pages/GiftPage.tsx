@@ -1,7 +1,8 @@
 import { useParams } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGift, isGiftLocked, GiftData } from '@/lib/giftStorage';
+import { trackEvent } from '@/lib/giftTracking';
 import { Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import TransitionScreen from '@/components/TransitionScreen';
 import FloatingMessages from '@/components/FloatingMessages';
 import MediaReveal from '@/components/MediaReveal';
 import MusicToggle from '@/components/MusicToggle';
+import ReactionButtons from '@/components/ReactionButtons';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 
 type Stage = 'intro' | 'opening' | 'transition' | 'floating' | 'revealed';
@@ -26,6 +28,7 @@ const GiftPage = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const trackedRef = useRef<Set<string>>(new Set());
   const { isPlaying, toggle: toggleMusic, play: playMusic, stop } = useBackgroundMusic((gift?.theme as any) || 'love');
 
   useEffect(() => {
@@ -39,14 +42,21 @@ const GiftPage = () => {
     load();
   }, [id]);
 
+  const track = useCallback((eventType: 'opened' | 'letter_viewed' | 'video_started' | 'video_completed') => {
+    if (!id || trackedRef.current.has(eventType)) return;
+    trackedRef.current.add(eventType);
+    trackEvent(id, eventType);
+  }, [id]);
+
   const handleOpeningComplete = useCallback(() => {
     setStage('transition');
   }, []);
 
   const handleFloatingComplete = useCallback(() => {
     setStage('revealed');
+    track('letter_viewed');
     stop();
-  }, [stop]);
+  }, [stop, track]);
 
   if (loading) {
     return (
@@ -135,7 +145,7 @@ const GiftPage = () => {
               <GiftBox
                 senderName={gift.sender_name}
                 theme={gift.theme}
-                onOpen={() => { playMusic(); setStage('opening'); }}
+                onOpen={() => { playMusic(); track('opened'); setStage('opening'); }}
               />
             </motion.div>
           </motion.div>
@@ -204,6 +214,8 @@ const GiftPage = () => {
                   photos={gift.photos}
                   videoUrl={gift.video_url}
                   delay={0.5}
+                  onVideoStart={() => track('video_started')}
+                  onVideoComplete={() => track('video_completed')}
                 />
               )}
 
@@ -269,6 +281,11 @@ const GiftPage = () => {
                   ))}
                 </div>
               )}
+
+              {/* Reaction Buttons */}
+              <div className="my-8">
+                <ReactionButtons giftId={gift.gift_id} />
+              </div>
 
               <motion.p
                 initial={{ opacity: 0 }}

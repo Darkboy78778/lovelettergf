@@ -5,9 +5,11 @@ interface MediaRevealProps {
   photos: string[];
   videoUrl?: string;
   delay?: number;
+  onVideoStart?: () => void;
+  onVideoComplete?: () => void;
 }
 
-const MediaReveal = ({ photos, videoUrl, delay = 1.8 }: MediaRevealProps) => {
+const MediaReveal = ({ photos, videoUrl, delay = 1.8, onVideoStart, onVideoComplete }: MediaRevealProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentPhoto, setCurrentPhoto] = useState(0);
 
@@ -68,6 +70,12 @@ const MediaReveal = ({ photos, videoUrl, delay = 1.8 }: MediaRevealProps) => {
                 autoPlay
                 className="w-full rounded-2xl"
                 style={{ maxHeight: '360px', objectFit: 'cover' }}
+                onPlay={() => onVideoStart?.()}
+                onEnded={() => onVideoComplete?.()}
+                onTimeUpdate={(e) => {
+                  const v = e.currentTarget;
+                  if (v.duration && v.currentTime / v.duration >= 0.8) onVideoComplete?.();
+                }}
               />
             </motion.div>
           ) : photos.length === 1 ? (

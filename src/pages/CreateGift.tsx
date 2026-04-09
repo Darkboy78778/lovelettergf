@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Upload, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { Heart, Upload, ArrowLeft, Sparkles, Loader2, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,7 @@ import { saveGift, GiftTheme } from '@/lib/giftStorage';
 import FloatingHearts from '@/components/FloatingHearts';
 import VideoUpload from '@/components/VideoUpload';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
 
 const themes: { value: GiftTheme; label: string; emoji: string }[] = [
   { value: 'love', label: 'Love', emoji: '❤️' },
@@ -32,6 +33,7 @@ const CreateGift = () => {
   const [password, setPassword] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trackingEnabled, setTrackingEnabled] = useState(true);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -235,6 +237,18 @@ const CreateGift = () => {
                   placeholder="Set a password"
                   className="rounded-xl bg-background/50 font-body"
                 />
+              </div>
+
+              {/* Live Tracking */}
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <Activity size={16} className="text-primary" />
+                  <div>
+                    <Label className="font-body font-medium">Live Reaction Mode</Label>
+                    <p className="text-xs text-muted-foreground font-body">Track when your gift is opened and receive reactions</p>
+                  </div>
+                </div>
+                <Switch checked={trackingEnabled} onCheckedChange={setTrackingEnabled} />
               </div>
             </div>
 
