@@ -214,6 +214,8 @@ const GiftPage = () => {
                   photos={gift.photos}
                   videoUrl={gift.video_url}
                   delay={0.5}
+                  onVideoStart={() => track('video_started')}
+                  onVideoComplete={() => track('video_completed')}
                 />
               )}
 
