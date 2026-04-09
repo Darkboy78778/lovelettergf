@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import CreateGift from "./pages/CreateGift";
 import ShareGift from "./pages/ShareGift";
 import GiftPage from "./pages/GiftPage";
+import SenderDashboard from "./pages/SenderDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/create" element={<CreateGift />} />
           <Route path="/share/:id" element={<ShareGift />} />
           <Route path="/gift/:id" element={<GiftPage />} />
+          <Route path="/dashboard/:token" element={<SenderDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

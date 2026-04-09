@@ -238,6 +238,18 @@ const CreateGift = () => {
                   className="rounded-xl bg-background/50 font-body"
                 />
               </div>
+
+              {/* Live Tracking */}
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <Activity size={16} className="text-primary" />
+                  <div>
+                    <Label className="font-body font-medium">Live Reaction Mode</Label>
+                    <p className="text-xs text-muted-foreground font-body">Track when your gift is opened and receive reactions</p>
+                  </div>
+                </div>
+                <Switch checked={trackingEnabled} onCheckedChange={setTrackingEnabled} />
+              </div>
             </div>
 
             <Button
