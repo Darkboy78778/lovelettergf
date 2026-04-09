@@ -37,10 +37,10 @@ export async function getGiftReactions(giftId: string) {
 }
 
 export async function getGiftBySenderToken(senderToken: string) {
-  const { data } = await supabase
+  const { data } = await (supabase as any)
     .from('gifts')
     .select('*')
-    .eq('sender_token' as any, senderToken)
+    .eq('sender_token', senderToken)
     .single();
   return data;
 }
