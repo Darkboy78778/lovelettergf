@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      gift_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          gift_id: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          gift_id: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          gift_id?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      gift_reactions: {
+        Row: {
+          created_at: string
+          gift_id: string
+          id: string
+          reaction_type: string
+        }
+        Insert: {
+          created_at?: string
+          gift_id: string
+          id?: string
+          reaction_type: string
+        }
+        Update: {
+          created_at?: string
+          gift_id?: string
+          id?: string
+          reaction_type?: string
+        }
+        Relationships: []
+      }
       gifts: {
         Row: {
           created_at: string
@@ -24,7 +69,9 @@ export type Database = {
           photos: string[] | null
           recipient_name: string
           sender_name: string
+          sender_token: string
           theme: string
+          tracking_enabled: boolean
           unlock_date: string | null
           video_url: string | null
         }
@@ -37,7 +84,9 @@ export type Database = {
           photos?: string[] | null
           recipient_name: string
           sender_name: string
+          sender_token?: string
           theme?: string
+          tracking_enabled?: boolean
           unlock_date?: string | null
           video_url?: string | null
         }
@@ -50,7 +99,9 @@ export type Database = {
           photos?: string[] | null
           recipient_name?: string
           sender_name?: string
+          sender_token?: string
           theme?: string
+          tracking_enabled?: boolean
           unlock_date?: string | null
           video_url?: string | null
         }
