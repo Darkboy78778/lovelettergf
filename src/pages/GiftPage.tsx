@@ -12,7 +12,7 @@ import GiftBox from '@/components/GiftBox';
 import ChibiDecorations from '@/components/ChibiDecorations';
 import OpeningAnimation from '@/components/OpeningAnimation';
 import TransitionScreen from '@/components/TransitionScreen';
-import FloatingMessages from '@/components/FloatingMessages';
+import FloatingMessages3D from '@/components/FloatingMessages3D';
 import MediaReveal from '@/components/MediaReveal';
 import MusicToggle from '@/components/MusicToggle';
 import ReactionButtons from '@/components/ReactionButtons';
@@ -187,7 +187,7 @@ const GiftPage = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <FloatingMessages
+            <FloatingMessages3D
               theme={gift.theme}
               senderName={gift.sender_name}
               recipientName={gift.recipient_name}
