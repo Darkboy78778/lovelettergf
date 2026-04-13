@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGift, isGiftLocked, GiftData } from '@/lib/giftStorage';
@@ -22,6 +22,8 @@ type Stage = 'intro' | 'opening' | 'transition' | 'floating' | 'revealed';
 
 const GiftPage = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const isPreview = searchParams.get('preview') === 'true';
   const [gift, setGift] = useState<GiftData | null>(null);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState<Stage>('intro');
@@ -43,10 +45,10 @@ const GiftPage = () => {
   }, [id]);
 
   const track = useCallback((eventType: 'opened' | 'letter_viewed' | 'video_started' | 'video_completed') => {
-    if (!id || trackedRef.current.has(eventType)) return;
+    if (!id || isPreview || trackedRef.current.has(eventType)) return;
     trackedRef.current.add(eventType);
     trackEvent(id, eventType);
-  }, [id]);
+  }, [id, isPreview]);
 
   const handleOpeningComplete = useCallback(() => {
     setStage('transition');
