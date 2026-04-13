@@ -271,7 +271,7 @@ const GiftPage = () => {
 
               {/* Reaction Buttons */}
               <div className="my-8">
-                <ReactionButtons giftId={gift.gift_id} />
+                <ReactionButtons giftId={gift.gift_id} disabled={isPreview} />
               </div>
 
               <motion.p

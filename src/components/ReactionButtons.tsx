@@ -6,13 +6,15 @@ const REACTIONS: ReactionType[] = ['❤️', '🥺', '😍', '🎉'];
 
 interface ReactionButtonsProps {
   giftId: string;
+  disabled?: boolean;
 }
 
-const ReactionButtons = ({ giftId }: ReactionButtonsProps) => {
+const ReactionButtons = ({ giftId, disabled = false }: ReactionButtonsProps) => {
   const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; emoji: string; x: number }[]>([]);
   let counter = 0;
 
   const handleReaction = async (reaction: ReactionType) => {
+    if (disabled) return;
     const id = counter++;
     const x = Math.random() * 60 - 30;
     setFloatingEmojis(prev => [...prev, { id, emoji: reaction, x }]);
@@ -49,10 +51,12 @@ const ReactionButtons = ({ giftId }: ReactionButtonsProps) => {
         {REACTIONS.map((reaction) => (
           <motion.button
             key={reaction}
-            whileTap={{ scale: 1.4 }}
-            whileHover={{ scale: 1.15 }}
+            whileTap={disabled ? undefined : { scale: 1.4 }}
+            whileHover={disabled ? undefined : { scale: 1.15 }}
             onClick={() => handleReaction(reaction)}
-            className="w-12 h-12 rounded-full glass-card flex items-center justify-center text-xl shadow-lg hover:shadow-xl transition-shadow"
+            disabled={disabled}
+            aria-disabled={disabled}
+            className="w-12 h-12 rounded-full glass-card flex items-center justify-center text-xl shadow-lg hover:shadow-xl transition-shadow disabled:cursor-not-allowed disabled:opacity-50"
           >
             {reaction}
           </motion.button>
@@ -64,7 +68,7 @@ const ReactionButtons = ({ giftId }: ReactionButtonsProps) => {
         transition={{ delay: 2.3 }}
         className="text-center text-xs text-muted-foreground font-body mt-2"
       >
-        Tap to send a reaction 💫
+        {disabled ? 'Preview mode: reactions are off' : 'Tap to send a reaction 💫'}
       </motion.p>
     </div>
   );
