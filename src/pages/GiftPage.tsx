@@ -51,7 +51,7 @@ const GiftPage = () => {
   }, [id, isPreview]);
 
   const handleOpeningComplete = useCallback(() => {
-    setStage('transition');
+    setStage('floating');
   }, []);
 
   const handleFloatingComplete = useCallback(() => {
@@ -165,21 +165,6 @@ const GiftPage = () => {
           </motion.div>
         )}
 
-        {stage === 'transition' && (
-          <motion.div
-            key="transition"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <TransitionScreen
-              recipientName={gift.recipient_name}
-              theme={gift.theme}
-              onNext={() => setStage('floating')}
-            />
-          </motion.div>
-        )}
 
         {stage === 'floating' && (
           <motion.div
