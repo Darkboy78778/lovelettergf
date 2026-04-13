@@ -154,7 +154,7 @@ const ShareGift = () => {
               <Download size={16} />
               Download QR Code
             </Button>
-            <Link to={`/gift/${gift.gift_id}`}>
+            <Link to={`/gift/${gift.gift_id}?preview=true`}>
               <Button className="rounded-full font-body gap-2 w-full">
                 <Eye size={16} />
                 Preview Gift
