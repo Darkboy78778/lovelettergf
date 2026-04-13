@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 
 type ThemeType = 'love' | 'birthday' | 'friendship' | 'romantic' | 'surprise';
 
@@ -13,55 +13,70 @@ const THEME_MUSIC: Record<ThemeType, string> = {
 export function useBackgroundMusic(theme: ThemeType = 'love') {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const preloadedRef = useRef(false);
+
+  // Preload audio on mount so it's ready instantly
+  useEffect(() => {
+    const audio = new Audio();
+    audio.src = THEME_MUSIC[theme];
+    audio.loop = true;
+    audio.volume = 0;
+    audio.preload = 'auto';
+    audioRef.current = audio;
+    preloadedRef.current = true;
+
+    return () => {
+      audio.pause();
+      audio.src = '';
+      audioRef.current = null;
+    };
+  }, [theme]);
 
   const cleanup = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
+      audioRef.current.volume = 0;
     }
   }, []);
 
   const stop = useCallback(() => {
     if (audioRef.current) {
-      // Fade out
       const audio = audioRef.current;
+      // Quick fade out
       const fadeOut = setInterval(() => {
         if (audio.volume > 0.05) {
           audio.volume = Math.max(0, audio.volume - 0.05);
         } else {
           clearInterval(fadeOut);
           audio.pause();
-          audio.volume = 0.4;
+          audio.currentTime = 0;
+          audio.volume = 0;
         }
-      }, 80);
+      }, 50);
     }
     setIsPlaying(false);
   }, []);
 
   const play = useCallback(() => {
-    cleanup();
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    const audio = new Audio(THEME_MUSIC[theme]);
-    audio.loop = true;
+    // Reset and play immediately — audio is already preloaded
     audio.volume = 0;
-    audioRef.current = audio;
-
-    // Fade in
     audio.play().then(() => {
+      // Fade in
       const fadeIn = setInterval(() => {
         if (audio.volume < 0.35) {
           audio.volume = Math.min(0.4, audio.volume + 0.03);
         } else {
           clearInterval(fadeIn);
         }
-      }, 100);
+      }, 60);
       setIsPlaying(true);
     }).catch(() => {
-      // Autoplay blocked by browser - will need user interaction
       setIsPlaying(false);
     });
-  }, [theme, cleanup]);
+  }, []);
 
   const toggle = useCallback(() => {
     if (isPlaying) {
@@ -70,10 +85,6 @@ export function useBackgroundMusic(theme: ThemeType = 'love') {
       play();
     }
   }, [isPlaying, play, stop]);
-
-  useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
 
   return { isPlaying, toggle, play, stop };
 }

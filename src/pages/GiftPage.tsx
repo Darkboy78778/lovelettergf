@@ -57,8 +57,14 @@ const GiftPage = () => {
   const handleFloatingComplete = useCallback(() => {
     setStage('revealed');
     track('letter_viewed');
-    stop();
   }, [stop, track]);
+
+  // Stop music right before note is revealed
+  useEffect(() => {
+    if (stage === 'revealed') {
+      stop();
+    }
+  }, [stage, stop]);
 
   if (loading) {
     return (
