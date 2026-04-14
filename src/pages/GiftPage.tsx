@@ -45,7 +45,9 @@ const GiftPage = () => {
   }, [id]);
 
   const track = useCallback((eventType: 'opened' | 'letter_viewed' | 'video_started' | 'video_completed') => {
-    if (!id || isPreview || trackedRef.current.has(eventType)) return;
+    if (!id || isPreview) return;
+    // Allow multiple 'opened' events (each real visit counts), dedup others per session
+    if (eventType !== 'opened' && trackedRef.current.has(eventType)) return;
     trackedRef.current.add(eventType);
     trackEvent(id, eventType);
   }, [id, isPreview]);
