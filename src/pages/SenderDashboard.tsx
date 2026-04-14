@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, Mail, Play, CheckCircle, Loader2, Clock } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Mail, Play, CheckCircle, Loader2, Clock, BarChart3, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getGiftBySenderToken, getGiftEvents, getGiftReactions } from '@/lib/giftTracking';
 import FloatingHearts from '@/components/FloatingHearts';
@@ -19,8 +19,18 @@ interface Reaction {
   created_at: string;
 }
 
+interface PeriodData {
+  label: string;
+  startDate: Date;
+  endDate: Date;
+  events: TimelineEvent[];
+  reactions: Reaction[];
+  viewCount: number;
+  isCurrent: boolean;
+}
+
 const eventConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-  opened: { icon: <Eye size={16} />, label: 'Gift Opened', color: 'text-green-500' },
+  opened: { icon: <Eye size={16} />, label: 'Gift Viewed', color: 'text-green-500' },
   letter_viewed: { icon: <Mail size={16} />, label: 'Letter Viewed', color: 'text-blue-500' },
   video_started: { icon: <Play size={16} />, label: 'Video Started', color: 'text-purple-500' },
   video_completed: { icon: <CheckCircle size={16} />, label: 'Video Watched', color: 'text-pink-500' },
@@ -33,6 +43,7 @@ const SenderDashboard = () => {
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [floatingReaction, setFloatingReaction] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -89,6 +100,73 @@ const SenderDashboard = () => {
     };
   }, [gift]);
 
+  // Compute periods (2-day windows) from first opened event
+  const { periods, totalViews, timeSinceFirstOpen, firstOpenDate } = useMemo(() => {
+    const openedEvents = events.filter(e => e.event_type === 'opened');
+    const totalViews = openedEvents.length;
+
+    if (openedEvents.length === 0) {
+      return { periods: [] as PeriodData[], totalViews: 0, timeSinceFirstOpen: null, firstOpenDate: null };
+    }
+
+    const firstOpen = new Date(openedEvents[0].created_at);
+    const now = new Date();
+    const diffMs = now.getTime() - firstOpen.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+
+    let timeSinceFirstOpen: string;
+    if (diffDays > 0) {
+      timeSinceFirstOpen = `${diffDays}d ${remainingHours}h ago`;
+    } else if (diffHours > 0) {
+      timeSinceFirstOpen = `${diffHours}h ago`;
+    } else {
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      timeSinceFirstOpen = `${Math.max(1, diffMins)}m ago`;
+    }
+
+    // Build 2-day periods from first open
+    const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+    const periods: PeriodData[] = [];
+    let periodStart = new Date(firstOpen);
+
+    while (periodStart.getTime() <= now.getTime()) {
+      const periodEnd = new Date(periodStart.getTime() + TWO_DAYS_MS);
+      const isCurrent = now.getTime() < periodEnd.getTime();
+
+      const periodEvents = events.filter(e => {
+        const t = new Date(e.created_at).getTime();
+        return t >= periodStart.getTime() && t < periodEnd.getTime();
+      });
+
+      const periodReactions = reactions.filter(r => {
+        const t = new Date(r.created_at).getTime();
+        return t >= periodStart.getTime() && t < periodEnd.getTime();
+      });
+
+      const viewCount = periodEvents.filter(e => e.event_type === 'opened').length;
+
+      const label = isCurrent
+        ? 'Current Period'
+        : `${formatDateShort(periodStart)} – ${formatDateShort(new Date(periodEnd.getTime() - 1))}`;
+
+      periods.push({
+        label,
+        startDate: new Date(periodStart),
+        endDate: periodEnd,
+        events: periodEvents,
+        reactions: periodReactions,
+        viewCount,
+        isCurrent,
+      });
+
+      periodStart = new Date(periodEnd);
+    }
+
+    return { periods: periods.reverse(), totalViews, timeSinceFirstOpen, firstOpenDate: firstOpen };
+  }, [events, reactions]);
+
   if (loading) {
     return (
       <div className="min-h-screen gradient-romantic flex items-center justify-center">
@@ -115,15 +193,8 @@ const SenderDashboard = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  const currentPeriod = periods.find(p => p.isCurrent);
+  const historyPeriods = periods.filter(p => !p.isCurrent);
 
   return (
     <div className="min-h-screen gradient-romantic relative">
@@ -164,11 +235,39 @@ const SenderDashboard = () => {
           </p>
         </motion.div>
 
-        {/* Status Card */}
+        {/* Stats Cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 gap-3 mb-6"
+        >
+          {/* View Count */}
+          <div className="glass-card rounded-2xl p-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+              <BarChart3 size={20} className="text-primary" />
+            </div>
+            <p className="font-display font-bold text-2xl">{totalViews}</p>
+            <p className="text-xs text-muted-foreground font-body">Total Views</p>
+          </div>
+
+          {/* Time Since First Open */}
+          <div className="glass-card rounded-2xl p-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center mx-auto mb-2">
+              <Clock size={20} className="text-pink-500" />
+            </div>
+            <p className="font-display font-bold text-lg">
+              {timeSinceFirstOpen || '—'}
+            </p>
+            <p className="text-xs text-muted-foreground font-body">Since First Open</p>
+          </div>
+        </motion.div>
+
+        {/* Status Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
           className="glass-card rounded-2xl p-6 mb-6"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -186,8 +285,8 @@ const SenderDashboard = () => {
                 {isOpened ? 'Gift Opened! 🎉' : 'Not Opened Yet'}
               </p>
               <p className="text-sm text-muted-foreground font-body">
-                {isOpened
-                  ? `Opened at ${formatTime(events.find(e => e.event_type === 'opened')!.created_at)}`
+                {isOpened && firstOpenDate
+                  ? `First opened ${formatDateFull(firstOpenDate)} at ${formatTimeFull(firstOpenDate)}`
                   : 'Waiting for the magic moment...'}
               </p>
             </div>
@@ -201,17 +300,25 @@ const SenderDashboard = () => {
           )}
         </motion.div>
 
-        {/* Timeline */}
-        {events.length > 0 && (
+        {/* Current Period Timeline */}
+        {currentPeriod && currentPeriod.events.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="glass-card rounded-2xl p-6 mb-6"
           >
-            <h2 className="font-display font-bold text-lg mb-4">📝 Activity Timeline</h2>
-            <div className="space-y-4">
-              {events.map((event, i) => {
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-bold text-lg">📝 Current Activity</h2>
+              <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-body">
+                {currentPeriod.viewCount} view{currentPeriod.viewCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground font-body mb-3">
+              Resets every 2 days · History is preserved below
+            </p>
+            <div className="space-y-3">
+              {currentPeriod.events.map((event, i) => {
                 const config = eventConfig[event.event_type] || {
                   icon: <Eye size={16} />,
                   label: event.event_type,
@@ -222,20 +329,99 @@ const SenderDashboard = () => {
                     key={event.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
+                    transition={{ delay: i * 0.05 }}
                     className="flex items-start gap-3"
                   >
                     <div className={`mt-0.5 ${config.color}`}>{config.icon}</div>
                     <div className="flex-1">
                       <p className="font-body font-medium text-sm">{config.label}</p>
                       <p className="text-xs text-muted-foreground font-body">
-                        {formatDate(event.created_at)} at {formatTime(event.created_at)}
+                        {formatDateFull(new Date(event.created_at))} at {formatTimeFull(new Date(event.created_at))}
                       </p>
                     </div>
                   </motion.div>
                 );
               })}
             </div>
+          </motion.div>
+        )}
+
+        {/* History Toggle */}
+        {historyPeriods.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mb-6"
+          >
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="w-full glass-card rounded-2xl p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <History size={18} className="text-muted-foreground" />
+                <span className="font-display font-bold text-sm">
+                  📜 View History ({historyPeriods.length} period{historyPeriods.length !== 1 ? 's' : ''})
+                </span>
+              </div>
+              <motion.span
+                animate={{ rotate: showHistory ? 180 : 0 }}
+                className="text-muted-foreground"
+              >
+                ▼
+              </motion.span>
+            </button>
+
+            <AnimatePresence>
+              {showHistory && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  {historyPeriods.map((period, pi) => (
+                    <div key={pi} className="glass-card rounded-2xl p-5 mt-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-display font-bold text-sm">{period.label}</p>
+                        <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full font-body">
+                          {period.viewCount} view{period.viewCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {period.events.map((event) => {
+                          const config = eventConfig[event.event_type] || {
+                            icon: <Eye size={14} />,
+                            label: event.event_type,
+                            color: 'text-muted-foreground',
+                          };
+                          return (
+                            <div key={event.id} className="flex items-start gap-2 text-sm">
+                              <div className={`mt-0.5 ${config.color} opacity-70`}>{config.icon}</div>
+                              <div className="flex-1">
+                                <span className="font-body text-xs">{config.label}</span>
+                                <span className="text-xs text-muted-foreground font-body ml-2">
+                                  {formatTimeFull(new Date(event.created_at))}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {period.reactions.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-muted/30">
+                          <div className="flex flex-wrap gap-1">
+                            {period.reactions.map(r => (
+                              <span key={r.id} className="text-sm">{r.reaction_type}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
@@ -294,5 +480,18 @@ const SenderDashboard = () => {
     </div>
   );
 };
+
+// Helper functions
+function formatDateShort(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDateFull(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatTimeFull(d: Date) {
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
 
 export default SenderDashboard;
