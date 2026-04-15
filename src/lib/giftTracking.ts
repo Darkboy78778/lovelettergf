@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export type EventType = 'opened' | 'letter_viewed' | 'video_started' | 'video_completed';
+export type EventType = 'opened' | 'letter_viewed' | 'video_started' | 'video_completed' | 'note_reading' | 'note_left';
 export type ReactionType = '❤️' | '🥺' | '😍' | '🎉';
 
 export async function trackEvent(giftId: string, eventType: EventType, metadata: Record<string, unknown> = {}) {

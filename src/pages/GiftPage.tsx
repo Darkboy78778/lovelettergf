@@ -44,10 +44,10 @@ const GiftPage = () => {
     load();
   }, [id]);
 
-  const track = useCallback((eventType: 'opened' | 'letter_viewed' | 'video_started' | 'video_completed') => {
+  const track = useCallback((eventType: 'opened' | 'letter_viewed' | 'video_started' | 'video_completed' | 'note_reading' | 'note_left') => {
     if (!id || isPreview) return;
     // Allow multiple 'opened' events (each real visit counts), dedup others per session
-    if (eventType !== 'opened' && trackedRef.current.has(eventType)) return;
+    if (eventType !== 'opened' && eventType !== 'note_reading' && eventType !== 'note_left' && trackedRef.current.has(eventType)) return;
     trackedRef.current.add(eventType);
     trackEvent(id, eventType);
   }, [id, isPreview]);
@@ -59,6 +59,7 @@ const GiftPage = () => {
   const handleFloatingComplete = useCallback(() => {
     setStage('revealed');
     track('letter_viewed');
+    track('note_reading');
   }, [stop, track]);
 
   // Stop music right before note is revealed
@@ -67,6 +68,31 @@ const GiftPage = () => {
       stop();
     }
   }, [stage, stop]);
+
+  // Track when user leaves while reading
+  useEffect(() => {
+    if (stage !== 'revealed' || isPreview || !id) return;
+
+    const handleLeave = () => {
+      trackEvent(id, 'note_left');
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        trackEvent(id, 'note_left');
+      } else if (document.visibilityState === 'visible') {
+        trackEvent(id, 'note_reading');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleLeave);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleLeave);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [stage, isPreview, id]);
 
   if (loading) {
     return (

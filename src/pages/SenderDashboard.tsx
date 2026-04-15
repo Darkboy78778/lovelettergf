@@ -34,6 +34,8 @@ const eventConfig: Record<string, { icon: React.ReactNode; label: string; color:
   letter_viewed: { icon: <Mail size={16} />, label: 'Letter Viewed', color: 'text-blue-500' },
   video_started: { icon: <Play size={16} />, label: 'Video Started', color: 'text-purple-500' },
   video_completed: { icon: <CheckCircle size={16} />, label: 'Video Watched', color: 'text-pink-500' },
+  note_reading: { icon: <Eye size={16} />, label: 'Reading Note', color: 'text-emerald-500' },
+  note_left: { icon: <EyeOff size={16} />, label: 'Left Note', color: 'text-orange-500' },
 };
 
 const SenderDashboard = () => {
@@ -193,6 +195,23 @@ const SenderDashboard = () => {
     return acc;
   }, {} as Record<string, number>);
 
+  // Determine reading status
+  const readingEvents = events.filter(e => e.event_type === 'note_reading' || e.event_type === 'note_left');
+  const lastReadingEvent = readingEvents.length > 0 ? readingEvents[readingEvents.length - 1] : null;
+  const isCurrentlyReading = lastReadingEvent?.event_type === 'note_reading';
+  const lastReadTime = lastReadingEvent ? new Date(lastReadingEvent.created_at) : null;
+
+  const getTimeAgo = (date: Date) => {
+    const diffMs = Date.now() - date.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `${days}d ${hours % 24}h ago`;
+    if (hours > 0) return `${hours}h ${mins % 60}m ago`;
+    if (mins > 0) return `${mins}m ago`;
+    return 'just now';
+  };
+
   const currentPeriod = periods.find(p => p.isCurrent);
   const historyPeriods = periods.filter(p => !p.isCurrent);
 
@@ -299,8 +318,42 @@ const SenderDashboard = () => {
             </div>
           )}
         </motion.div>
+        {/* Reading Status */}
+        {isOpened && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.17 }}
+            className="glass-card rounded-2xl p-4 mb-6"
+          >
+            <div className="flex items-center gap-3">
+              {isCurrentlyReading ? (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                  <p className="font-body text-sm font-medium">
+                    📖 Reading your note right now...
+                  </p>
+                </>
+              ) : lastReadTime ? (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
+                  <p className="font-body text-sm text-muted-foreground">
+                    📖 Last read {getTimeAgo(lastReadTime)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
+                  <p className="font-body text-sm text-muted-foreground">
+                    📖 Hasn't read the note yet
+                  </p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
 
-        {/* Current Period Timeline */}
+
         {currentPeriod && currentPeriod.events.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
