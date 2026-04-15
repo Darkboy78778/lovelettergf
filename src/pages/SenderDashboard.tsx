@@ -195,6 +195,23 @@ const SenderDashboard = () => {
     return acc;
   }, {} as Record<string, number>);
 
+  // Determine reading status
+  const readingEvents = events.filter(e => e.event_type === 'note_reading' || e.event_type === 'note_left');
+  const lastReadingEvent = readingEvents.length > 0 ? readingEvents[readingEvents.length - 1] : null;
+  const isCurrentlyReading = lastReadingEvent?.event_type === 'note_reading';
+  const lastReadTime = lastReadingEvent ? new Date(lastReadingEvent.created_at) : null;
+
+  const getTimeAgo = (date: Date) => {
+    const diffMs = Date.now() - date.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `${days}d ${hours % 24}h ago`;
+    if (hours > 0) return `${hours}h ${mins % 60}m ago`;
+    if (mins > 0) return `${mins}m ago`;
+    return 'just now';
+  };
+
   const currentPeriod = periods.find(p => p.isCurrent);
   const historyPeriods = periods.filter(p => !p.isCurrent);
 
