@@ -34,6 +34,8 @@ const eventConfig: Record<string, { icon: React.ReactNode; label: string; color:
   letter_viewed: { icon: <Mail size={16} />, label: 'Letter Viewed', color: 'text-blue-500' },
   video_started: { icon: <Play size={16} />, label: 'Video Started', color: 'text-purple-500' },
   video_completed: { icon: <CheckCircle size={16} />, label: 'Video Watched', color: 'text-pink-500' },
+  note_reading: { icon: <Eye size={16} />, label: 'Reading Note', color: 'text-emerald-500' },
+  note_left: { icon: <EyeOff size={16} />, label: 'Left Note', color: 'text-orange-500' },
 };
 
 const SenderDashboard = () => {
