@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, Mail, Play, CheckCircle, Loader2, Clock, BarChart3, History } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Mail, Play, CheckCircle, Loader2, Clock, BarChart3, History, Smartphone, Monitor, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getGiftBySenderToken, getGiftEvents, getGiftReactions } from '@/lib/giftTracking';
 import FloatingHearts from '@/components/FloatingHearts';
@@ -281,6 +281,88 @@ const SenderDashboard = () => {
             <p className="text-xs text-muted-foreground font-body">Since First Open</p>
           </div>
         </motion.div>
+
+        {/* View Details - Device & IP tracking */}
+        {(() => {
+          const openedEvents = events.filter(e => e.event_type === 'opened');
+          if (openedEvents.length === 0) return null;
+
+          // Group views by IP
+          const viewsByIp: Record<string, { events: TimelineEvent[]; device_model: string; device_type: string }> = {};
+          openedEvents.forEach(e => {
+            const meta = (e.metadata || {}) as Record<string, string>;
+            const ip = meta.ip_address || 'unknown';
+            if (!viewsByIp[ip]) {
+              viewsByIp[ip] = {
+                events: [],
+                device_model: meta.device_model || 'Unknown',
+                device_type: meta.device_type || 'Unknown',
+              };
+            }
+            viewsByIp[ip].events.push(e);
+          });
+
+          const uniqueDevices = Object.keys(viewsByIp).length;
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="glass-card rounded-2xl p-5 mb-6"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Smartphone size={18} className="text-primary" />
+                <h2 className="font-display font-bold text-base">📱 View Details</h2>
+                <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-body">
+                  {uniqueDevices} device{uniqueDevices !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {Object.entries(viewsByIp).map(([ip, info]) => {
+                  const isSameDevice = uniqueDevices === 1;
+                  return (
+                    <div key={ip} className="bg-muted/20 rounded-xl p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        {info.device_type === 'Desktop' ? (
+                          <Monitor size={14} className="text-blue-400" />
+                        ) : (
+                          <Smartphone size={14} className="text-green-400" />
+                        )}
+                        <span className="font-body font-semibold text-sm">
+                          {info.device_model}
+                        </span>
+                        {isSameDevice && (
+                          <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full font-body">
+                            Same device
+                          </span>
+                        )}
+                        {!isSameDevice && (
+                          <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded-full font-body">
+                            Different device
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-body">
+                        <Globe size={10} />
+                        <span>{ip}</span>
+                        <span className="mx-1">·</span>
+                        <span>{info.events.length} view{info.events.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {info.events.map(e => (
+                          <span key={e.id} className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded font-body text-muted-foreground">
+                            {formatTimeFull(new Date(e.created_at))}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* Status Card */}
         <motion.div
