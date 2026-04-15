@@ -318,8 +318,42 @@ const SenderDashboard = () => {
             </div>
           )}
         </motion.div>
+        {/* Reading Status */}
+        {isOpened && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.17 }}
+            className="glass-card rounded-2xl p-4 mb-6"
+          >
+            <div className="flex items-center gap-3">
+              {isCurrentlyReading ? (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                  <p className="font-body text-sm font-medium">
+                    📖 Reading your note right now...
+                  </p>
+                </>
+              ) : lastReadTime ? (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
+                  <p className="font-body text-sm text-muted-foreground">
+                    📖 Last read {getTimeAgo(lastReadTime)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
+                  <p className="font-body text-sm text-muted-foreground">
+                    📖 Hasn't read the note yet
+                  </p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
 
-        {/* Current Period Timeline */}
+
         {currentPeriod && currentPeriod.events.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
