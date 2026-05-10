@@ -452,7 +452,7 @@ const SenderDashboard = () => {
               </span>
             </div>
             <p className="text-xs text-muted-foreground font-body mb-3">
-              Resets every 2 days · History is preserved below
+              Resets every 24 hours · History is preserved below
             </p>
             <div className="space-y-3">
               {currentPeriod.events.map((event, i) => {
