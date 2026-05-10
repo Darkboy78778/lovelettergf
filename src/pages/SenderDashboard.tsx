@@ -286,7 +286,7 @@ const SenderDashboard = () => {
 
         {/* View Details - Device & IP tracking */}
         {(() => {
-          const openedEvents = events.filter(e => e.event_type === 'opened');
+          const openedEvents = currentEvents.filter(e => e.event_type === 'opened');
           if (openedEvents.length === 0) return null;
 
           // Group views by IP
