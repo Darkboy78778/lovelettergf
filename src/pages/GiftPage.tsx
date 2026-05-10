@@ -69,28 +69,71 @@ const GiftPage = () => {
     }
   }, [stage, stop]);
 
-  // Track when user leaves while reading
+  // Heartbeat: send note_reading every 10s while actively viewing.
+  // Dashboard treats reader as "active" only if the last heartbeat is recent.
   useEffect(() => {
     if (stage !== 'revealed' || isPreview || !id) return;
 
-    const handleLeave = () => {
-      trackEvent(id, 'note_left');
+    let heartbeat: number | undefined;
+    let active = true;
+
+    const startBeating = () => {
+      if (heartbeat) return;
+      trackEvent(id, 'note_reading');
+      heartbeat = window.setInterval(() => {
+        if (active && document.visibilityState === 'visible') {
+          trackEvent(id, 'note_reading');
+        }
+      }, 10000);
+    };
+
+    const stopBeating = (sendLeft: boolean) => {
+      if (heartbeat) {
+        clearInterval(heartbeat);
+        heartbeat = undefined;
+      }
+      if (sendLeft) {
+        // Use sendBeacon for reliability on unload
+        try {
+          const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-event`;
+          const payload = JSON.stringify({
+            gift_id: id,
+            event_type: 'note_left',
+            metadata: {},
+          });
+          const blob = new Blob([payload], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        } catch {
+          trackEvent(id, 'note_left');
+        }
+      }
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        trackEvent(id, 'note_left');
-      } else if (document.visibilityState === 'visible') {
-        trackEvent(id, 'note_reading');
+        active = false;
+        stopBeating(true);
+      } else {
+        active = true;
+        startBeating();
       }
     };
 
-    window.addEventListener('beforeunload', handleLeave);
+    const handleUnload = () => {
+      active = false;
+      stopBeating(true);
+    };
+
+    startBeating();
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
 
     return () => {
-      window.removeEventListener('beforeunload', handleLeave);
+      stopBeating(true);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
     };
   }, [stage, isPreview, id]);
 
