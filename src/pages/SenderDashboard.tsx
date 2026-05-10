@@ -388,8 +388,8 @@ const SenderDashboard = () => {
                 {isOpened ? 'Gift Opened! 🎉' : 'Not Opened Yet'}
               </p>
               <p className="text-sm text-muted-foreground font-body">
-                {isOpened && firstOpenDate
-                  ? `First opened ${formatDateFull(firstOpenDate)} at ${formatTimeFull(firstOpenDate)}`
+                {isOpened && firstOpenEverDate
+                  ? `First opened ${formatDateFull(firstOpenEverDate)} at ${formatTimeFull(firstOpenEverDate)}`
                   : 'Waiting for the magic moment...'}
               </p>
             </div>
