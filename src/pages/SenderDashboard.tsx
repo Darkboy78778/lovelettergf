@@ -272,15 +272,15 @@ const SenderDashboard = () => {
             <p className="text-xs text-muted-foreground font-body">Total Views</p>
           </div>
 
-          {/* Time Since First Open */}
+          {/* Time Since Last Open (today) */}
           <div className="glass-card rounded-2xl p-4 text-center">
             <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center mx-auto mb-2">
               <Clock size={20} className="text-pink-500" />
             </div>
             <p className="font-display font-bold text-lg">
-              {timeSinceFirstOpen || '—'}
+              {timeSinceLastOpen || '—'}
             </p>
-            <p className="text-xs text-muted-foreground font-body">Since First Open</p>
+            <p className="text-xs text-muted-foreground font-body">Since Last Open</p>
           </div>
         </motion.div>
 
