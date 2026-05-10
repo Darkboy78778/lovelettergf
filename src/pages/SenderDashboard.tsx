@@ -46,6 +46,13 @@ const SenderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [floatingReaction, setFloatingReaction] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every 3s so "reading now" expires in real time and time-ago labels stay fresh
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 3000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -102,55 +109,37 @@ const SenderDashboard = () => {
     };
   }, [gift]);
 
-  // Compute periods (2-day windows) from first opened event
-  const { periods, totalViews, timeSinceFirstOpen, firstOpenDate } = useMemo(() => {
-    const openedEvents = events.filter(e => e.event_type === 'opened');
-    const totalViews = openedEvents.length;
+  // Compute daily (24h) periods. Stats refresh each day; history only includes days the note was opened.
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+  const { periods, currentPeriod, historyPeriods } = useMemo(() => {
+    const openedEvents = events.filter(e => e.event_type === 'opened');
     if (openedEvents.length === 0) {
-      return { periods: [] as PeriodData[], totalViews: 0, timeSinceFirstOpen: null, firstOpenDate: null };
+      return { periods: [] as PeriodData[], currentPeriod: null as PeriodData | null, historyPeriods: [] as PeriodData[] };
     }
 
     const firstOpen = new Date(openedEvents[0].created_at);
-    const now = new Date();
-    const diffMs = now.getTime() - firstOpen.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-    const remainingHours = diffHours % 24;
+    const nowDate = new Date(now);
 
-    let timeSinceFirstOpen: string;
-    if (diffDays > 0) {
-      timeSinceFirstOpen = `${diffDays}d ${remainingHours}h ago`;
-    } else if (diffHours > 0) {
-      timeSinceFirstOpen = `${diffHours}h ago`;
-    } else {
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      timeSinceFirstOpen = `${Math.max(1, diffMins)}m ago`;
-    }
-
-    // Build 2-day periods from first open
-    const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+    // Build 24h periods anchored to first open
     const periods: PeriodData[] = [];
     let periodStart = new Date(firstOpen);
-
-    while (periodStart.getTime() <= now.getTime()) {
-      const periodEnd = new Date(periodStart.getTime() + TWO_DAYS_MS);
-      const isCurrent = now.getTime() < periodEnd.getTime();
+    while (periodStart.getTime() <= nowDate.getTime()) {
+      const periodEnd = new Date(periodStart.getTime() + ONE_DAY_MS);
+      const isCurrent = nowDate.getTime() < periodEnd.getTime();
 
       const periodEvents = events.filter(e => {
         const t = new Date(e.created_at).getTime();
         return t >= periodStart.getTime() && t < periodEnd.getTime();
       });
-
       const periodReactions = reactions.filter(r => {
         const t = new Date(r.created_at).getTime();
         return t >= periodStart.getTime() && t < periodEnd.getTime();
       });
-
       const viewCount = periodEvents.filter(e => e.event_type === 'opened').length;
 
       const label = isCurrent
-        ? 'Current Period'
+        ? 'Today'
         : `${formatDateShort(periodStart)} – ${formatDateShort(new Date(periodEnd.getTime() - 1))}`;
 
       periods.push({
@@ -162,12 +151,15 @@ const SenderDashboard = () => {
         viewCount,
         isCurrent,
       });
-
       periodStart = new Date(periodEnd);
     }
 
-    return { periods: periods.reverse(), totalViews, timeSinceFirstOpen, firstOpenDate: firstOpen };
-  }, [events, reactions]);
+    const currentPeriod = periods.find(p => p.isCurrent) || null;
+    // History: only past periods that actually had opens
+    const historyPeriods = periods.filter(p => !p.isCurrent && p.viewCount > 0).reverse();
+
+    return { periods, currentPeriod, historyPeriods };
+  }, [events, reactions, now]);
 
   if (loading) {
     return (
@@ -189,20 +181,31 @@ const SenderDashboard = () => {
     );
   }
 
+  // Current-day stats only
+  const currentEvents = currentPeriod?.events || [];
+  const currentOpens = currentEvents.filter(e => e.event_type === 'opened');
+  const totalViews = currentOpens.length;
+  const lastOpenDate = currentOpens.length > 0 ? new Date(currentOpens[currentOpens.length - 1].created_at) : null;
   const isOpened = events.some(e => e.event_type === 'opened');
-  const reactionCounts = reactions.reduce((acc, r) => {
+  const firstOpenEverDate = isOpened ? new Date(events.filter(e => e.event_type === 'opened')[0].created_at) : null;
+
+  const reactionCounts = (currentPeriod?.reactions || []).reduce((acc, r) => {
     acc[r.reaction_type] = (acc[r.reaction_type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  // Determine reading status
-  const readingEvents = events.filter(e => e.event_type === 'note_reading' || e.event_type === 'note_left');
+  // Real-time reading detection: only "reading now" if last note_reading heartbeat is within 25s
+  // and no later note_left event exists.
+  const READING_FRESH_MS = 25_000;
+  const readingEvents = currentEvents.filter(e => e.event_type === 'note_reading' || e.event_type === 'note_left');
   const lastReadingEvent = readingEvents.length > 0 ? readingEvents[readingEvents.length - 1] : null;
-  const isCurrentlyReading = lastReadingEvent?.event_type === 'note_reading';
+  const lastReadingAge = lastReadingEvent ? now - new Date(lastReadingEvent.created_at).getTime() : Infinity;
+  const isCurrentlyReading =
+    lastReadingEvent?.event_type === 'note_reading' && lastReadingAge < READING_FRESH_MS;
   const lastReadTime = lastReadingEvent ? new Date(lastReadingEvent.created_at) : null;
 
   const getTimeAgo = (date: Date) => {
-    const diffMs = Date.now() - date.getTime();
+    const diffMs = now - date.getTime();
     const mins = Math.floor(diffMs / 60000);
     const hours = Math.floor(mins / 60);
     const days = Math.floor(hours / 24);
@@ -212,8 +215,7 @@ const SenderDashboard = () => {
     return 'just now';
   };
 
-  const currentPeriod = periods.find(p => p.isCurrent);
-  const historyPeriods = periods.filter(p => !p.isCurrent);
+  const timeSinceLastOpen = lastOpenDate ? getTimeAgo(lastOpenDate) : null;
 
   return (
     <div className="min-h-screen gradient-romantic relative">
