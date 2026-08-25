@@ -1,25 +1,39 @@
-# Welcome to your Lovable project
+# Love Letter 💌
 
-## Project info
+A personal digital gift project created to turn meaningful messages into a beautiful interactive experience.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## About Me
 
-## How can I edit this code?
+I'm the creator behind this project, interested in building modern websites, useful digital tools, and creative web experiences.
 
-There are several ways of editing your application.
+I enjoy experimenting with technology and turning ideas into functional, user-friendly projects.
 
-**Use Lovable**
+## About This Project
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Love Letter is designed to let people create and share personalized digital gifts with:
 
-Changes made via Lovable will be committed automatically to this repo.
+- 💌 Personal messages
+- 🎵 Music
+- ✨ Animations
+- 🎁 Interactive gift experiences
+- 🔗 Unique shareable links
+- 📱 Mobile-friendly design
 
-**Use your preferred IDE**
+## Technologies
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Supabase
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Purpose
 
+This project started as a simple idea to make digital messages feel more personal and memorable.
+
+---
+
+**Created with ❤️ by Nexora**
 Follow these steps:
 
 ```sh
