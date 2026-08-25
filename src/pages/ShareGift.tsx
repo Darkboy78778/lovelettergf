@@ -54,7 +54,7 @@ const ShareGift = () => {
     );
   }
 
-  const giftUrl = `${window.location.origin}/gift/${gift.gift_id}`;
+  const giftUrl = `${window.location.origin}${import.meta.env.BASE_URL}gift/${gift.gift_id}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(giftUrl);
