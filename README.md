@@ -1,87 +1,144 @@
-# Love Letter 💌
+# 💌 Love Letter
 
-A personal digital gift project created to turn meaningful messages into a beautiful interactive experience.
+### Turn a message into a moment worth remembering.
 
-## About Me
+Love Letter is a digital gifting experience designed to transform ordinary messages into personalized, interactive moments.
 
-I'm the creator behind this project, interested in building modern websites, useful digital tools, and creative web experiences.
-
-I enjoy experimenting with technology and turning ideas into functional, user-friendly projects.
-
-## About This Project
-
-Love Letter is designed to let people create and share personalized digital gifts with:
-
-- 💌 Personal messages
-- 🎵 Music
-- ✨ Animations
-- 🎁 Interactive gift experiences
-- 🔗 Unique shareable links
-- 📱 Mobile-friendly design
-
-## Technologies
-
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- Supabase
-
-## Purpose
-
-This project started as a simple idea to make digital messages feel more personal and memorable.
+Create a gift, personalize the experience, add music and animations, then share it through a unique link.
 
 ---
 
-**Created with ❤️ by Nexora**
-Follow these steps:
+## ✨ Features
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- 💌 Personalized messages
+- 🎁 Interactive digital gifts
+- 🎵 Background music
+- ✨ Animated transitions
+- 🖼️ Personalized content
+- 🔗 Unique shareable links
+- 📱 Responsive design
+- 🔐 Private gift access
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 👨‍💻 About Me
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+I'm **Nexora**, a developer and digital creator interested in building modern websites, useful digital tools, and creative web experiences.
+
+I enjoy turning ideas into functional products and experimenting with different technologies, interfaces, and user experiences.
+
+---
+
+## 🧩 How It Works
+
+Each gift is accessed through a unique URL:
+
+```text
+/gift/{gift-id}
 ```
 
-**Edit a file directly in GitHub**
+The application reads the gift ID from the URL and loads the corresponding content.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```tsx
+const { id } = useParams<{ id: string }>();
 
-**Use GitHub Codespaces**
+const gift = await getGift(id);
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+if (!gift) {
+  return <NotFound />;
+}
+```
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## 🔗 Shareable Gifts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Every created gift receives its own unique link:
 
-## How can I deploy this project?
+```tsx
+const giftUrl = `${window.location.origin}/gift/${gift.id}`;
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+navigator.clipboard.writeText(giftUrl);
+```
 
-## Can I connect a custom domain to my Lovable project?
+This allows a gift to be shared directly with its recipient.
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🎵 Interactive Experience
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The gift experience supports background music and interactive controls:
+
+```tsx
+const [isPlaying, setIsPlaying] = useState(false);
+
+const toggleMusic = () => {
+  if (isPlaying) {
+    audio.pause();
+  } else {
+    audio.play();
+  }
+
+  setIsPlaying(!isPlaying);
+};
+```
+
+---
+
+## 🛠️ Technology
+
+```text
+React
+TypeScript
+Vite
+Tailwind CSS
+Supabase
+```
+
+### Architecture
+
+```text
+                    User
+                      │
+                      ▼
+              React Application
+                      │
+          ┌───────────┼───────────┐
+          ▼           ▼           ▼
+     Gift Creation  Gift Viewer  Sharing
+          │           │           │
+          └───────────┼───────────┘
+                      ▼
+                   Supabase
+                      │
+                      ▼
+                  Gift Data
+```
+
+---
+
+## 🎯 Vision
+
+> **Make digital messages feel less digital.**
+
+The idea behind Love Letter is simple: a meaningful message can be more than text on a screen. It can become an experience that someone can open, explore, and remember.
+
+---
+
+## 🚀 Project Status
+
+**Active project**
+
+The project is continuously being improved with new ideas, interactions, and features.
+
+---
+
+## 📌 Creator
+
+**Nexora**
+
+Building websites, digital tools, and creative web experiences.
+
+---
+
+### © 2026 Nexora
